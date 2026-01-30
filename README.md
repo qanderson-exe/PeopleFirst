@@ -7,3 +7,6 @@ Smartphone application dedicated to getting college students help
   - IzzyHz - Isaiah Hara - ihara001@odu.edu 
   - bloodysakuras - David Kabengela - nkabe001@odu.edu
   - tacbodell - Bryson Coons - bcoon003@odu.edu
+
+# Write-ups
+  [Lab 1](Labs/PeopleFirst%20Lab%201%20Outline.docx)
