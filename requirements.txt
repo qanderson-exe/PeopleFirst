@@ -1,0 +1,4 @@
+buildozer
+cython==0.29.34
+kivy
+setuptools
