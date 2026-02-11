@@ -2,6 +2,12 @@
 **/build/
 !**/src/**/build/
 
+# Ignores personal virtual environments created
+*venv*
+
+# Ignores the build files for apks
+.buildozer
+
 # Ignore Gradle GUI config
 gradle-app.setting
 
