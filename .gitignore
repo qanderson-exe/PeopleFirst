@@ -25,3 +25,7 @@ gradle-app.setting
 .project
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
+
+myenv/bin/python
+myenv/bin/python3
+myenv/bin/python3.12
