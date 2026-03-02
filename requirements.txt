@@ -19,6 +19,7 @@ feedparser==6.0.12
 filelock==3.20.3
 filetype==1.2.0
 idna==3.11
+iniconfig==2.3.0
 jieba3k==0.35.1
 Jinja2==3.1.6
 joblib==1.5.3
@@ -33,10 +34,12 @@ packaging==26.0
 pexpect==4.9.0
 pillow==12.1.1
 platformdirs==4.5.1
+pluggy==1.6.0
 ptyprocess==0.7.0
 pycountry==26.2.16
 Pygments==2.19.2
 pyproject_hooks==1.2.0
+pytest==9.0.2
 python-dateutil==2.9.0.post0
 PyYAML==6.0.3
 regex==2026.2.19
