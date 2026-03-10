@@ -3,9 +3,12 @@
 !**/src/**/build/
 .settings/
 .vscode/
+bin/
 
 # Ignores personal virtual environments created
-*venv*
+.venv/
+venv/
+myenv/
 
 # Ignores the files created by the pytest framework
 *pytest*
