@@ -19,7 +19,7 @@ def summarize_url(url, language="english",sentence_count=10):
         sentence_count: The number of sentences the summary should be
 
     Returns:
-        The summary of the url as a string
+        summary: The summary of the url as a string
     """
 
 
@@ -39,11 +39,12 @@ def summarize_url(url, language="english",sentence_count=10):
         summary += str(sentence) + "\n"
     return summary
 
-
+def main():
+    url = "https://www.snhu.edu/about-us/newsroom/education/student-stress"
+    summary = summarize_url(url,sentence_count=10)
+    print(summary)
 
 nltk.download('punkt_tab', quiet=True)
 
 if __name__ == "__main__":
-    url = "https://www.snhu.edu/about-us/newsroom/education/student-stress"
-    summary = summarize_url(url,sentence_count=10)
-    print(summary)
+    main()
