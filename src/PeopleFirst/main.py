@@ -33,6 +33,13 @@ class PeopleFirst(App):
         posts = db.get_posts("69b7419881ef391290364bb3")
         for post in posts:
             print(post)
+            
+            post_id = str(post['_id'])
+            
+            db.create_reply(post_id, "I feel the anxiety the same way", "User456")
+            replies = db.get_replies(post_id)
+            for reply in replies:
+                print(reply)
 
 if __name__ == "__main__":  
     PeopleFirst().run()
