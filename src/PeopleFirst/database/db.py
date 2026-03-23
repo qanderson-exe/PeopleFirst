@@ -51,7 +51,7 @@ def create_reply(post_id, reply_content, reply_author):
     reply = {
         "post_id": ObjectId(post_id),
         "content": reply_content,
-        "reply author": reply_author
+        "author": reply_author
     }
     result = replies_collection.insert_one(reply)
     return str(result.inserted_id)
