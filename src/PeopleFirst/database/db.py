@@ -49,7 +49,7 @@ def get_posts(forum_id):
 # Create a reply under a post with a specific post ID from the "posts" collection with the specifid post ID, content, and author.
 def create_reply(post_id, reply_content, reply_author):
     reply = {
-        "reply_id": ObjectId(post_id),
+        "post_id": ObjectId(post_id),
         "content": reply_content,
         "reply author": reply_author
     }
