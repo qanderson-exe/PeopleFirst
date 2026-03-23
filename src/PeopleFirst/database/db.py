@@ -14,6 +14,7 @@ db = client["peoplefirst"]
 forums_collection = db["forums"]
 posts_collection = db["posts"]
 users_collection = db["users"]
+replies_collection = db["replies"]
 
 # Create a forum in the "forums" collection with the specified title and description.
 def create_forum(title, description):
@@ -44,3 +45,19 @@ def create_post(forum_id, content, author):
 def get_posts(forum_id):
     id = ObjectId(forum_id)
     return list(posts_collection.find({"forum_id": id}))
+
+# Create a reply under a post with a specific post ID from the "posts" collection with the specifid post ID, content, and author.
+def create_reply(post_id, reply_content, reply_author):
+    reply = {
+        "reply_id": ObjectId(post_id),
+        "content": reply_content,
+        "reply author": reply_author
+    }
+    result = replies_collection.insert_one(reply)
+    return str(result.inserted_id)
+
+# Retrieve all the replies under a specific post ID from the "posts" collection and return them as a list. 
+def get_replies(post_id):
+    id = ObjectId(post_id)
+    return list(replies_collection.find({"post_id": id}))
+    
