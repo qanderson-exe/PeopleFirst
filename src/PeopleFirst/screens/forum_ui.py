@@ -1,10 +1,3 @@
-"""
-PeopleFirst - Forum UI
-Sprint 1: Forum screen matching the dark teal brand aesthetic.
-Run with: python forum_ui.py
-Requires: pip install kivy
-"""
-
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.boxlayout import BoxLayout
@@ -34,7 +27,7 @@ TEXT_MUTED     = (0.38, 0.48, 0.48, 1)      # very muted
 DIVIDER        = (0.13, 0.20, 0.22, 1)      # subtle divider
 
 # ── Window Setup ─────────────────────────────────────────────────────────────
-Window.size = (390, 844)          # iPhone-like portrait viewport
+Window.size = (390, 844)         
 Window.clearcolor = BG_DARK
 
 # ── Sample Data ──────────────────────────────────────────────────────────────
