@@ -13,6 +13,7 @@ from kivy.metrics import dp
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
 from kivy.uix.behaviors import ButtonBehavior
+from src.PeopleFirst.database.db import Database
 
 # ── Brand Colors ─────────────────────────────────────────────────────────────
 BG_DARK        = (0.07, 0.09, 0.11, 1)      # near-black background
@@ -444,15 +445,39 @@ class ForumScreen(Screen):
     # ── Populate / Filter ─────────────────────────────────────────────────
     def _populate_topics(self, topics):
         self.topic_grid.clear_widgets()
+        
+        ### Modified for prototype
+        database_posts = self.add_database_posts()
+        for post in database_posts:
+            topics.append(post)
+
+        ### End of Modification
         for topic in topics:
             self.topic_grid.add_widget(self._build_topic_card(topic))
 
     def _on_search(self, instance, value):
         query = value.strip().lower()
+
         filtered = [t for t in FORUM_TOPICS
                     if query in t["title"].lower() or query in t["desc"].lower()]
+        
         self._populate_topics(filtered)
 
+    def add_database_posts(self):
+        """
+        This is a temporary function for demo use only. Modifies forums data clusters to match the post format of the UI.
+        """
+
+        db = Database()
+        posts = list(db.forums_collection.find({}))
+        for post in posts:
+            post['desc'] = post.pop('description')
+            post['icon'] = "💬"
+            post['posts'] = 32
+            post['last_active'] = "1h ago"
+            post['tag'] = "New"
+        return posts
+    
     # ── New Topic Popup ───────────────────────────────────────────────────
     def _show_new_topic_popup(self, *_):
         content = BoxLayout(orientation="vertical", spacing=dp(12),
@@ -619,3 +644,5 @@ class PeopleFirstApp(App):
 
 if __name__ == "__main__":
     PeopleFirstApp().run()
+    #print("here\n",posts[1])
+    #print(imported_topics)
