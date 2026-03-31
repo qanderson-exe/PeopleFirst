@@ -10,8 +10,9 @@ bin/
 venv/
 myenv/
 
-# Ignores the files created by the pytest framework
+# Ignores the files created by the pytest framework and python executions
 *pytest*
+*pycache*
 
 # Ignores the build files for apks
 .buildozer

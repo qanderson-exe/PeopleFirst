@@ -240,6 +240,10 @@ class ForumScreen(Screen):
         self.topic_grid.bind(
             minimum_height=self.topic_grid.setter('height')
         )
+        
+        database_posts = self.add_database_posts()
+        for post in database_posts:
+            FORUM_TOPICS.append(post)
         self._populate_topics(FORUM_TOPICS)
         self.scroll.add_widget(self.topic_grid)
         root.add_widget(self.scroll)
@@ -446,12 +450,6 @@ class ForumScreen(Screen):
     def _populate_topics(self, topics):
         self.topic_grid.clear_widgets()
         
-        ### Modified for prototype
-        database_posts = self.add_database_posts()
-        for post in database_posts:
-            topics.append(post)
-
-        ### End of Modification
         for topic in topics:
             self.topic_grid.add_widget(self._build_topic_card(topic))
 
