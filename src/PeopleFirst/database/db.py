@@ -18,6 +18,7 @@ class Database():
         self.posts_collection = self.db["posts"]
         self.users_collection = self.db["users"]
         self.replies_collection = self.db["replies"]
+        self.resources_collection = self.db["resources"]
 
     # Create a forum in the "forums" collection with the specified title and description.
     def create_forum(self,title, description):
@@ -63,4 +64,23 @@ class Database():
     def get_replies(self,post_id):
         id = ObjectId(post_id)
         return list(self.replies_collection.find({"post_id": id}))
+    
+    # Create a new resource with a given link and webpage title.
+    def create_resource(self,link,webpage_title):
+        resource = {
+            "resource_id": len(self.resources_collection),
+            "link": link,
+            "webpage_title": webpage_title
+        }
+        result = self.resources_collection.insert_one(resource)
+        return str(result.inserted_id)
+
+    # Retrieve a resource by its unique id
+    def get_resource(self,resource_id):
+        id = ObjectId(resource_id)
+        return list(self.resources_collection.find({"resource_id": id}))
+    
+    # Retrieve a list of all resources in the database
+    def get_resources(self):
+        return list(self.resources_collection.find({}))
     

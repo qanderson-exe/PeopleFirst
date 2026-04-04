@@ -14,6 +14,11 @@ from kivy.clock import Clock
 from kivy.uix.widget import Widget
 from kivy.uix.behaviors import ButtonBehavior
 from src.PeopleFirst.database.db import Database
+from kivy.network.urlrequest import UrlRequest
+from src.PeopleFirst.server import run
+import json
+import time
+
 
 # ── Brand Colors ─────────────────────────────────────────────────────────────
 BG_DARK        = (0.07, 0.09, 0.11, 1)      # near-black background
@@ -32,40 +37,40 @@ Window.size = (390, 844)
 Window.clearcolor = BG_DARK
 
 # ── Sample Data ──────────────────────────────────────────────────────────────
-FORUM_TOPICS = [
-    {
-        "icon": "💬",
-        "title": "Anxiety & Stress Management",
-        "desc": "Tips and support for managing academic anxiety and daily stress.",
-        "posts": 143,
-        "last_active": "11h ago",
-        "tag": "Popular",
-    },
-    {
-        "icon": "🫂",
-        "title": "Depression Support",
-        "desc": "A safe space to share your experiences and find understanding.",
-        "posts": 140,
-        "last_active": "2h ago",
-        "tag": "Active",
-    },
-    {
-        "icon": "📚",
-        "title": "Academic Pressure & Burnout",
-        "desc": "Dealing with grades, deadlines, and the pressure to succeed.",
-        "posts": 56,
-        "last_active": "4h ago",
-        "tag": None,
-    },
-    {
-        "icon": "🧘",
-        "title": "Mindfulness & Self-Care",
-        "desc": "Meditation, routines, and practices that help you recharge.",
-        "posts": 53,
-        "last_active": "2h ago",
-        "tag": None,
-    },
-]
+# FORUM_TOPICS = [
+#     {
+#         "icon": "💬",
+#         "title": "Anxiety & Stress Management",
+#         "desc": "Tips and support for managing academic anxiety and daily stress.",
+#         "posts": 143,
+#         "last_active": "11h ago",
+#         "tag": "Popular",
+#     },
+#     {
+#         "icon": "🫂",
+#         "title": "Depression Support",
+#         "desc": "A safe space to share your experiences and find understanding.",
+#         "posts": 140,
+#         "last_active": "2h ago",
+#         "tag": "Active",
+#     },
+#     {
+#         "icon": "📚",
+#         "title": "Academic Pressure & Burnout",
+#         "desc": "Dealing with grades, deadlines, and the pressure to succeed.",
+#         "posts": 56,
+#         "last_active": "4h ago",
+#         "tag": None,
+#     },
+#     {
+#         "icon": "🧘",
+#         "title": "Mindfulness & Self-Care",
+#         "desc": "Meditation, routines, and practices that help you recharge.",
+#         "posts": 53,
+#         "last_active": "2h ago",
+#         "tag": None,
+#     },
+# ]
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -157,9 +162,14 @@ def make_label(text, font_size=14, color=TEXT_PRIMARY, bold=False,
 # ── Forum Screen ─────────────────────────────────────────────────────────────
 
 class ForumScreen(Screen):
-    def __init__(self, **kwargs):
+    def __init__(self, test_server=False, **kwargs,):
         super().__init__(**kwargs)
         self._search_text = ""
+        self.FORUM_TOPICS = []
+        self.TUNNEL_IP = "https://preeducationally-isoperimetrical-sylas.ngrok-free.dev/api/forums/"
+        if test_server:
+            run()
+            self.TUNNEL_IP = "http://localhost:5000/api/forums/"
         self._build_ui()
 
     # ── Build ──────────────────────────────────────────────────────────────
@@ -241,10 +251,15 @@ class ForumScreen(Screen):
             minimum_height=self.topic_grid.setter('height')
         )
         
-        database_posts = self.add_database_posts()
-        for post in database_posts:
-            FORUM_TOPICS.append(post)
-        self._populate_topics(FORUM_TOPICS)
+        # Old implementation
+        # database_posts = self.add_database_posts()
+        # for post in database_posts:
+        #     FORUM_TOPICS.append(post)
+        
+        db_request = self.get_request()
+        db_request.wait()
+        self.FORUM_TOPICS = db_request.result
+        self._populate_topics(self.FORUM_TOPICS)
         self.scroll.add_widget(self.topic_grid)
         root.add_widget(self.scroll)
 
@@ -348,17 +363,18 @@ class ForumScreen(Screen):
         card.bind(on_release=lambda *_, t=topic: self._open_topic(t))
 
         # Icon bubble
-        icon_box = CardLayout(
-            bg_color=TEAL_DARK,
-            radius=10,
-            size_hint=(None, None),
-            size=(dp(44), dp(44)),
-        )
-        icon_lbl = Label(
-            text=topic["icon"],
-            font_size=dp(22),
-        )
-        icon_box.add_widget(icon_lbl)
+        if topic.get("icon"):
+            icon_box = CardLayout(
+                bg_color=TEAL_DARK,
+                radius=10,
+                size_hint=(None, None),
+                size=(dp(44), dp(44)),
+            )
+            icon_lbl = Label(
+                text=topic["icon"],
+                font_size=dp(22),
+            )
+            icon_box.add_widget(icon_lbl)
 
         # Text column
         text_col = BoxLayout(orientation="vertical", spacing=dp(2))
@@ -396,7 +412,7 @@ class ForumScreen(Screen):
 
         # Description
         desc_lbl = Label(
-            text=topic["desc"],
+            text=topic["description"],
             font_size=dp(11),
             color=TEXT_SECONDARY,
             halign="left",
@@ -408,6 +424,12 @@ class ForumScreen(Screen):
         # Meta row
         meta_row = BoxLayout(orientation="horizontal",
                              size_hint_y=None, height=dp(16))
+        if not topic.get("posts"):
+            topic['posts'] = 0
+
+        if not topic.get('last_active'):
+            topic['last_active'] = "Never"
+
         posts_lbl = Label(
             text=f"💬 {topic['posts']} posts",
             font_size=dp(10),
@@ -415,6 +437,7 @@ class ForumScreen(Screen):
             halign="left",
             valign="middle",
         )
+        
         posts_lbl.bind(size=lambda i, v: setattr(i, 'text_size', (v[0], None)))
         active_lbl = Label(
             text=f"🕐 {topic['last_active']}",
@@ -440,7 +463,8 @@ class ForumScreen(Screen):
             width=dp(20),
         )
 
-        card.add_widget(icon_box)
+        if topic.get('icon'):
+            card.add_widget(icon_box)
         card.add_widget(text_col)
         card.add_widget(chevron)
 
@@ -455,11 +479,28 @@ class ForumScreen(Screen):
 
     def _on_search(self, instance, value):
         query = value.strip().lower()
-
-        filtered = [t for t in FORUM_TOPICS
-                    if query in t["title"].lower() or query in t["desc"].lower()]
+        filtered = [t for t in self.FORUM_TOPICS
+                    if query in t["title"].lower() or query in t["description"].lower()]
         
         self._populate_topics(filtered)
+
+    def get_request(self):
+        request = UrlRequest(self.TUNNEL_IP, on_success=self.on_success)
+        return request
+
+    def post_request(self,args):
+        params = json.dumps(args)
+        request = UrlRequest(
+            self.TUNNEL_IP, 
+            req_body=params,
+            req_headers={'Content-Type': 'application/json'}, 
+            on_success=self.on_success
+        )
+        return request
+
+    def on_success(self, req, result):
+        print("Response received:", result)
+        return result
 
     def add_database_posts(self):
         """
@@ -552,22 +593,27 @@ class ForumScreen(Screen):
         if not title.strip():
             return
         new_topic = {
-            "icon": "🆕",
+            #"icon": "🆕",
             "title": title.strip(),
-            "desc": desc.strip() or "No description provided.",
+            "description": desc.strip() or "No description provided.",
             "posts": 1,
             "last_active": "just now",
             "tag": "New",
         }
-        FORUM_TOPICS.insert(0, new_topic)
-        self._populate_topics(FORUM_TOPICS)
+        db_request = self.post_request(new_topic)
+        db_request.wait()
+        if db_request.resp_status == 201:
+            self.FORUM_TOPICS.insert(0, new_topic)
+            self._populate_topics(self.FORUM_TOPICS)
+        else:
+            print("Post creation failed")
         popup.dismiss()
 
     def _open_topic(self, topic):
         content = BoxLayout(orientation="vertical", padding=dp(16), spacing=dp(12))
         content.add_widget(make_label(topic["title"], font_size=15, bold=True,
                                       color=TEXT_PRIMARY, size_hint_y=None, height=30))
-        content.add_widget(make_label(topic["desc"], font_size=12,
+        content.add_widget(make_label(topic["description"], font_size=12,
                                       color=TEXT_SECONDARY, size_hint_y=None, height=40))
         content.add_widget(make_label(f"💬 {topic['posts']} posts  •  🕐 {topic['last_active']}",
                                       font_size=11, color=TEXT_MUTED,
@@ -636,7 +682,7 @@ class PeopleFirstApp(App):
     def build(self):
         self.title = "PeopleFirst – Forums"
         sm = ScreenManager(transition=SlideTransition())
-        sm.add_widget(ForumScreen(name="forum"))
+        sm.add_widget(ForumScreen(name="forum",test_server=True))
         return sm
 
 
