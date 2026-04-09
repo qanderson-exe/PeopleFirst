@@ -24,15 +24,26 @@ class Database():
     def create_forum(self,title, description):
         forum = {
             "title": title,
-            "description": description
+            "description": description,
+            "is_reported": False
         }
 
         result = self.forums_collection.insert_one(forum)
         return str(result.inserted_id)
+    
+    # Allows a user to change the status of a forum
+    def update_forum(self,dict_args,id):
+        forum = dict_args
+        result = self.forums_collection.replace_one({'forum_id':id}, forum)
+        return str(result.upsertedId)
 
     # Retrieve all forums from the "forums" collection and return them as a list.
     def get_forums(self):
         return list(self.forums_collection.find())
+    
+    # Retrieve forum by id
+    def get_forum(self,id):
+        return self.forums_collection.find({"forum_id": id})
 
     # Create a post in the "posts" collection with the specified forum ID, content, and author.
     def create_post(self,forum_id, content, author):
@@ -78,7 +89,7 @@ class Database():
     # Retrieve a resource by its unique id
     def get_resource(self,resource_id):
         id = ObjectId(resource_id)
-        return list(self.resources_collection.find({"resource_id": id}))
+        return self.resources_collection.find({"resource_id": id})
     
     # Retrieve a list of all resources in the database
     def get_resources(self):

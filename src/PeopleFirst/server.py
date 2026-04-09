@@ -15,7 +15,8 @@ forums_fields = {
     'description': fields.String,
     "posts": fields.Integer,
     "last_active": fields.String,
-    "tag": fields.String
+    "tag": fields.String,
+    "is_reported": fields.Boolean
 }
 
 resource_fields = {
@@ -65,6 +66,13 @@ class ForumsAPI(Resource):
         
         result = db.create_forum(title,description)
         return result, 201
+
+    @marshal_with(forums_fields)
+    def patch(self,id):
+        args = forums_args.parse_args()
+        result = db.update_forum(args, id)
+        return result, 201
+
     
 class PostAPI(Resource):
     def get(self):
@@ -116,13 +124,15 @@ class EchoAPI(Resource):
         #recommendation = recommend(args)  # Currently commented out until we're ready to implement Echo
         #return recommendation, 201
 
+
 def server_start():
     try:
-        app.run(host='0.0.0.0', port=5000)
+        app.run()
     except:
         pass
 
 def run():
+    print("Here")
     try:
         t = Thread(target=server_start)
         t.start()

@@ -259,6 +259,7 @@ class ForumScreen(Screen):
         db_request = self.get_request()
         db_request.wait()
         self.FORUM_TOPICS = db_request.result
+        self.FORUM_TOPICS = [safe for safe in self.FORUM_TOPICS if safe.get('is_reported') == False]
         self._populate_topics(self.FORUM_TOPICS)
         self.scroll.add_widget(self.topic_grid)
         root.add_widget(self.scroll)
@@ -497,6 +498,17 @@ class ForumScreen(Screen):
             on_success=self.on_success
         )
         return request
+    
+    def patch_request(self,args):
+        params = json.dumps(args)
+        request = UrlRequest(
+            self.TUNNEL_IP, 
+            req_body=params,
+            req_headers={'Content-Type': 'application/json'}, 
+            on_success=self.on_success,
+            method='PATCH'
+        )
+        return request
 
     def on_success(self, req, result):
         print("Response received:", result)
@@ -598,7 +610,7 @@ class ForumScreen(Screen):
             "description": desc.strip() or "No description provided.",
             "posts": 1,
             "last_active": "just now",
-            "tag": "New",
+            "tag": "New"
         }
         db_request = self.post_request(new_topic)
         db_request.wait()
@@ -677,13 +689,13 @@ class ForumScreen(Screen):
 
 
 # ── App Entry ─────────────────────────────────────────────────────────────────
-
 class PeopleFirstApp(App):
     def build(self):
         self.title = "PeopleFirst – Forums"
         sm = ScreenManager(transition=SlideTransition())
         sm.add_widget(ForumScreen(name="forum",test_server=True))
         return sm
+
 
 
 if __name__ == "__main__":
