@@ -61,20 +61,19 @@ class Database():
         id = ObjectId(forum_id)
         return list(self.posts_collection.find({"forum_id": id}))
 
-    # Create a reply under a post with a specific post ID from the "posts" collection with the specifid post ID, content, and author.
-    def create_reply(self,post_id, reply_content, reply_author):
+    # Create a reply under a forum with a specific forum ID.
+    def create_reply(self, forum_id, description):
         reply = {
-            "post_id": ObjectId(post_id),
-            "content": reply_content,
-            "author": reply_author
+            "forum_id": ObjectId(forum_id),
+            "description": description
         }
         result = self.replies_collection.insert_one(reply)
         return str(result.inserted_id)
 
-    # Retrieve all the replies under a specific post ID from the "posts" collection and return them as a list. 
-    def get_replies(self,post_id):
-        id = ObjectId(post_id)
-        return list(self.replies_collection.find({"post_id": id}))
+    # Retrieve all replies under a specific forum ID.
+    def get_replies(self, forum_id):
+        forum_object_id = ObjectId(forum_id)
+        return list(self.replies_collection.find({"forum_id": forum_object_id}))
     
     # Create a new resource with a given link and webpage title.
     def create_resource(self,link,webpage_title):

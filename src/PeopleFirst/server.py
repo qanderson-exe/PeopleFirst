@@ -10,6 +10,7 @@ db = Database()
 api = Api(app)
 
 forums_fields = {
+    'id': fields.String(attribute='_id'),
     'icon': fields.String,
     'title': fields.String,
     'description': fields.String,
@@ -20,7 +21,6 @@ forums_fields = {
 }
 
 replies_fields = {
-    "title": fields.String,
     "description": fields.String,
 }
 
@@ -47,7 +47,6 @@ post_args.add_argument('content', type=str, required=True, help='Content cannot 
 post_args.add_argument('author', type=str, required=True, help='Author cannot be blank')
 
 reply_args = reqparse.RequestParser()
-reply_args.add_argument('title', type=str, required=True, help='Title cannot be blank')
 reply_args.add_argument('description', type=str, required=True, help='Description cannot be blank')
 
 resource_args = reqparse.RequestParser()
@@ -113,19 +112,17 @@ class ResourcesAPI(Resource):
     
 class ReplyAPI(Resource):
     @marshal_with(replies_fields)
-    def get(self):
-        replies = db.replies_collection.find({})
-        return str(list(replies))
+    def get(self, forum_id):
+        replies = db.get_replies(forum_id)
+        return replies
 
     @marshal_with(replies_fields)
-    def post(self):
+    def post(self, forum_id):
         args = reply_args.parse_args()
-        post_id = args['post_id']
-        title = args['title']
         description = args['description']
-        result = db.create_reply(post_id,title,description)
+        result = db.create_reply(forum_id, description)
         return result, 201
-
+    
 class UserAPI(Resource):
     def get(self):
         users = db.users_collection.find({})
@@ -163,7 +160,7 @@ api.add_resource(ForumsAPI,'/api/forums/')
 api.add_resource(PostAPI,'/api/posts/')
 api.add_resource(UserAPI,'/api/users/')
 api.add_resource(EchoAPI,'/api/echo/')
-api.add_resource(ReplyAPI,'/api/replies/')
+api.add_resource(ReplyAPI,'/api/replies/<string:forum_id>/') # needs forum_id to know which forum the reply is for
 api.add_resource(ResourcesAPI, '/api/resources/')
 
 
