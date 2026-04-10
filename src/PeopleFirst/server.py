@@ -19,6 +19,11 @@ forums_fields = {
     "is_reported": fields.Boolean
 }
 
+replies_fields = {
+    "title": fields.String,
+    "description": fields.String,
+}
+
 resource_fields = {
     'id': fields.Integer,
     'link': fields.String,
@@ -102,8 +107,23 @@ class ResourcesAPI(Resource):
     def post(self):
         args = resource_args.parse_args()
         link = args['link']
-        webpage_title = args['webpage title']
+        webpage_title = args['webpage_title']
         result = db.create_resource(link,webpage_title)
+        return result, 201
+    
+class ReplyAPI(Resource):
+    @marshal_with(replies_fields)
+    def get(self):
+        replies = db.replies_collection.find({})
+        return str(list(replies))
+
+    @marshal_with(replies_fields)
+    def post(self):
+        args = reply_args.parse_args()
+        post_id = args['post_id']
+        title = args['title']
+        description = args['description']
+        result = db.create_reply(post_id,title,description)
         return result, 201
 
 class UserAPI(Resource):
@@ -143,6 +163,8 @@ api.add_resource(ForumsAPI,'/api/forums/')
 api.add_resource(PostAPI,'/api/posts/')
 api.add_resource(UserAPI,'/api/users/')
 api.add_resource(EchoAPI,'/api/echo/')
+api.add_resource(ReplyAPI,'/api/replies/')
+api.add_resource(ResourcesAPI, '/api/resources/')
 
 
 if __name__ == '__main__':
