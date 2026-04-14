@@ -2,7 +2,7 @@ from flask import Flask
 from flask_restful import Api, Resource, fields, marshal_with, reqparse
 from src.PeopleFirst.database.db import Database
 from threading import Thread
-#from src.PeopleFirst.recommender import recommend   # Currently commented out until we're ready to implement Echo
+from src.PeopleFirst.recommender import recommend   # Currently commented out until we're ready to implement Echo
 
 
 app = Flask(__name__)
@@ -31,7 +31,7 @@ resource_fields = {
 }
 
 echo_fields = {
-    'query': fields.String
+    'query': fields.List(fields.String)
 }
 
 forums_args = reqparse.RequestParser()
@@ -138,8 +138,9 @@ class EchoAPI(Resource):
     @marshal_with(echo_fields)
     def post(self):
         args = echo_args.parse_args()
-        #recommendation = recommend(args)  # Currently commented out until we're ready to implement Echo
-        #return recommendation, 201
+        query = args['query']
+        recommendation = recommend(query)  # Currently commented out until we're ready to implement Echo
+        return {'query': recommendation}, 201
 
 
 def server_start():

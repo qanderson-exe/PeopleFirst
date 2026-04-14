@@ -10,12 +10,15 @@ def initialize_recommender():
     model = SentenceTransformer('all-MiniLM-L6-v2')
     websites = [
     "How to Deal with Stress in College",
-    "Healthy Organic Recipes and Cooking"
+    "Healthy Organic Recipes and Cooking",
+    "Creating healthy habits in college",
+    "Advice for Building Strong Relationships Throughout College",
+    "Surviving and Thriving: 12 Insider Tips for College Success"
     ]
 
     website_embeddings = model.encode(websites)
     embeddings_data = {'Websites': websites, 'Embeddings': website_embeddings}
-    with open('src/resources/website embeddings.pkl', 'wb') as f:
+    with open('src/resources/source embeddings.pkl', 'wb') as f:
         pickle.dump(embeddings_data, f)
     model.save('src/resources/recommender_model')
 
@@ -24,7 +27,7 @@ def load_embeddings():
     Loads vector embeddings for websites from pickle file
     """
 
-    with open('src/resources/website embeddings.pkl', 'rb') as f:
+    with open('src/resources/source embeddings.pkl', 'rb') as f:
         loaded_data = pickle.load(f)
     return loaded_data
 
@@ -45,7 +48,9 @@ def recommend(query):
     query_encoding = model.encode(query)
 
     hits = semantic_search(query_encoding, website_embeddings, 2)
-    return websites[hits[0][0]['corpus_id']]
+    sources = [websites[hits[0][index]['corpus_id']] for index in range(0,5)]
+    return sources
+    return websites[hits[0][0:5]['corpus_id']]
 
 def main():
     """
