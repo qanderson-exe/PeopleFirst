@@ -233,8 +233,11 @@ class ForumScreen(Screen):
         
         db_request = self.get_request()
         db_request.wait()
-        self.FORUM_TOPICS = db_request.result
-        self.FORUM_TOPICS = [safe for safe in self.FORUM_TOPICS if safe.get('is_reported') == False]
+        result = db_request.result
+        if isinstance(result, list):
+            self.FORUM_TOPICS = [safe for safe in result if isinstance(safe, dict) and safe.get('is_reported') == False]
+        else:
+            self.FORUM_TOPICS = []
         self._populate_topics(self.FORUM_TOPICS)
         self.scroll.add_widget(self.topic_grid)
         root.add_widget(self.scroll)
@@ -645,33 +648,10 @@ class ForumScreen(Screen):
         popup.dismiss()
 
     def _open_topic(self, topic):
-        content = BoxLayout(orientation="vertical", padding=dp(16), spacing=dp(12))
-        content.add_widget(make_label(topic["title"], font_size=15, bold=True,
-                                      color=get_color("TEXT_PRIMARY"), size_hint_y=None, height=30))
-        content.add_widget(make_label(topic["description"], font_size=12,
-                                      color=get_color("TEXT_SECONDARY"), size_hint_y=None, height=40))
-        content.add_widget(make_label(f"💬 {topic['posts']} posts  •  🕐 {topic['last_active']}",
-                                      font_size=11, color=get_color("TEXT_MUTED"),
-                                      size_hint_y=None, height=24))
-        close_btn = Button(
-            text="Close",
-            font_size=dp(13),
-            color=(0.05, 0.09, 0.09, 1),
-            background_color=get_color("TEAL_ACCENT"),
-            size_hint_y=None,
-            height=dp(40),
-        )
-        content.add_widget(close_btn)
-        popup = Popup(
-            title="",
-            content=content,
-            size_hint=(0.88, None),
-            height=dp(220),
-            background_color=get_color("TEAL_DARK"),
-            separator_height=0,
-        )
-        close_btn.bind(on_release=popup.dismiss)
-        popup.open()
+        thread_screen = self.manager.get_screen("thread")
+        thread_screen.load_topic(topic, self)
+        self.manager.transition = SlideTransition(direction="left")
+        self.manager.current = "thread"
 
     def _post_reply_from_reply_btn(self, topic, description):
         topic_id = topic.get("id")
@@ -746,12 +726,305 @@ class ForumScreen(Screen):
         self.manager.current = screen_name
 
 
+# ── Thread Screen ─────────────────────────────────────────────────────────────
+
+class ThreadScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.topic = None
+        self.forum_screen = None
+
+    def load_topic(self, topic, forum_screen=None):
+        self.topic = topic
+        self.forum_screen = forum_screen
+        self.clear_widgets()
+        self._build_ui()
+
+    def _build_ui(self):
+        if not self.topic:
+            return
+
+        root = BoxLayout(orientation="vertical")
+
+        # ── Status bar
+        spacer = Widget(size_hint_y=None, height=dp(44))
+        with spacer.canvas:
+            Color(*get_color("TEAL_DARK"))
+            spacer._rect = Rectangle(pos=spacer.pos, size=spacer.size)
+        spacer.bind(pos=lambda i, v: setattr(spacer._rect, 'pos', v),
+                    size=lambda i, v: setattr(spacer._rect, 'size', v))
+        root.add_widget(spacer)
+
+        # ── Header
+        header = CardLayout(
+            bg_color=get_color("TEAL_DARK"),
+            radius=0,
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(56),
+            padding=[dp(14), 0, dp(14), 0],
+            spacing=dp(8),
+        )
+        back_btn = Button(
+            text="<  Back",
+            font_size=dp(13),
+            color=get_color("LIME_ACCENT"),
+            background_color=(0, 0, 0, 0),
+            size_hint=(None, 1),
+            width=dp(70),
+        )
+        back_btn.bind(on_release=self._go_back)
+        title = make_label(self.topic["title"], font_size=13, bold=True,
+                           color=get_color("TEXT_PRIMARY"), halign="center")
+        header.add_widget(back_btn)
+        header.add_widget(title)
+        root.add_widget(header)
+
+        # ── Topic description card
+        desc_wrap = BoxLayout(
+            size_hint_y=None, height=dp(70),
+            padding=[dp(12), dp(8), dp(12), dp(4)],
+        )
+        desc_card = CardLayout(
+            bg_color=get_color("TEAL_DARK"),
+            radius=12,
+            orientation="vertical",
+            padding=[dp(12), dp(8), dp(12), dp(8)],
+        )
+        desc_card.add_widget(make_label(self.topic["description"], font_size=11,
+                                        color=get_color("TEXT_SECONDARY")))
+        posts_lbl = make_label(
+            f"{self.topic['posts']} posts  •  Last active {self.topic['last_active']}",
+            font_size=10, color=get_color("TEXT_MUTED"),
+            size_hint_y=None, height=18,
+        )
+        desc_card.add_widget(posts_lbl)
+        desc_wrap.add_widget(desc_card)
+        root.add_widget(desc_wrap)
+
+        # ── Replies label
+        replies = self.topic.get("replies", [])
+        replies_hdr = BoxLayout(
+            size_hint_y=None, height=dp(30),
+            padding=[dp(16), 0, dp(16), 0],
+        )
+        replies_hdr.add_widget(
+            make_label(f"Replies ({len(replies)})",
+                       font_size=11, color=get_color("TEXT_SECONDARY"), bold=True)
+        )
+        root.add_widget(replies_hdr)
+
+        # ── Scrollable replies
+        scroll = ScrollView(do_scroll_x=False, size_hint_y=1)
+        self.reply_grid = GridLayout(
+            cols=1,
+            spacing=dp(8),
+            padding=[dp(12), dp(4), dp(12), dp(12)],
+            size_hint_y=None,
+        )
+        self.reply_grid.bind(minimum_height=self.reply_grid.setter('height'))
+        self._populate_replies(replies)
+        scroll.add_widget(self.reply_grid)
+
+        # ── Reply input bar (fixed at bottom)
+        reply_bar = self._build_reply_bar()
+
+        # ── Bottom nav
+        nav = self._build_nav()
+
+        root.add_widget(scroll)
+        root.add_widget(reply_bar)
+        root.add_widget(nav)
+
+        self.add_widget(root)
+
+    def _populate_replies(self, replies):
+        self.reply_grid.clear_widgets()
+        for reply in replies:
+            self.reply_grid.add_widget(self._build_reply_card(reply))
+
+    def _build_reply_card(self, reply):
+        card = CardLayout(
+            bg_color=get_color("CARD_BG"),
+            radius=12,
+            orientation="vertical",
+            size_hint_y=None,
+            height=dp(80),
+            padding=[dp(12), dp(10), dp(12), dp(10)],
+            spacing=dp(4),
+        )
+        # Username + time row
+        meta_row = BoxLayout(orientation="horizontal",
+                             size_hint_y=None, height=dp(18))
+        user_lbl = Label(
+            text=reply.get("username", "Anonymous"),
+            font_size=dp(11),
+            bold=True,
+            color=get_color("TEAL_ACCENT"),
+            halign="left",
+            valign="middle",
+        )
+        user_lbl.bind(size=lambda i, v: setattr(i, 'text_size', (v[0], None)))
+        time_lbl = Label(
+            text=reply.get("time", ""),
+            font_size=dp(9),
+            color=get_color("TEXT_MUTED"),
+            halign="right",
+            valign="middle",
+        )
+        time_lbl.bind(size=lambda i, v: setattr(i, 'text_size', (v[0], None)))
+        meta_row.add_widget(user_lbl)
+        meta_row.add_widget(time_lbl)
+
+        # Reply text
+        text_lbl = Label(
+            text=reply.get("text", reply.get("description", "")),
+            font_size=dp(12),
+            color=get_color("TEXT_PRIMARY"),
+            halign="left",
+            valign="top",
+        )
+        text_lbl.bind(size=lambda i, v: setattr(i, 'text_size', (v[0], None)))
+
+        card.add_widget(meta_row)
+        card.add_widget(text_lbl)
+        return card
+
+    def _build_reply_bar(self):
+        bar = CardLayout(
+            bg_color=(0.08, 0.12, 0.14, 1),
+            radius=0,
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(56),
+            padding=[dp(10), dp(8), dp(10), dp(8)],
+            spacing=dp(8),
+        )
+
+        # Reply input
+        self.reply_input = TextInput(
+            hint_text="Write a reply...",
+            hint_text_color=get_color("TEXT_MUTED"),
+            foreground_color=get_color("TEXT_PRIMARY"),
+            background_color=(0.12, 0.18, 0.21, 1),
+            cursor_color=get_color("TEAL_ACCENT"),
+            font_size=dp(12),
+            multiline=False,
+            padding=[dp(8), dp(10)],
+        )
+
+        # Send button
+        send_btn = Button(
+            text="Send",
+            font_size=dp(12),
+            bold=True,
+            color=(0.05, 0.09, 0.09, 1),
+            background_color=get_color("TEAL_ACCENT"),
+            size_hint=(None, 1),
+            width=dp(54),
+        )
+        send_btn.bind(on_release=self._post_reply)
+
+        bar.add_widget(self.reply_input)
+        bar.add_widget(send_btn)
+        return bar
+
+    def _post_reply(self, *_):
+        text = self.reply_input.text.strip()
+        if not text:
+            return
+
+        topic_id = self.topic.get("id")
+        payload = {"description": text}
+
+        if self.forum_screen and topic_id:
+            request = self.forum_screen.post_reply_request(
+                topic_id,
+                payload,
+                on_success=self._on_reply_post_success,
+                on_error=self._on_reply_post_error,
+            )
+        else:
+            # Fallback: local-only reply (no server)
+            new_reply = {
+                "username": "Anonymous",
+                "text": text,
+                "time": "just now",
+            }
+            self.topic.setdefault("replies", []).append(new_reply)
+            self.topic["posts"] = self.topic.get("posts", 0) + 1
+            self.topic["last_active"] = "just now"
+            self.reply_input.text = ""
+            self._populate_replies(self.topic["replies"])
+            if self.forum_screen:
+                self.forum_screen._populate_topics(self.forum_screen.FORUM_TOPICS)
+
+    def _on_reply_post_success(self, req, result):
+        self.reply_input.text = ""
+        self.topic["posts"] = self.topic.get("posts", 0) + 1
+        self.topic["last_active"] = "just now"
+        if self.forum_screen:
+            self.forum_screen._fetch_replies_for_topic(self.topic)
+            self.forum_screen._populate_topics(self.forum_screen.FORUM_TOPICS)
+        # Re-fetch replies from server to show the new one
+        if self.forum_screen:
+            self.forum_screen.get_replies_request(
+                self.topic.get("id"),
+                on_success=lambda req, result: self._populate_replies(
+                    result if isinstance(result, list) else []
+                )
+            )
+
+    def _on_reply_post_error(self, *_):
+        print("Reply post failed")
+
+    def _go_back(self, *_):
+        self.manager.transition = SlideTransition(direction="right")
+        self.manager.current = "forum"
+
+    def _build_nav(self):
+        nav = CardLayout(
+            bg_color=get_color("TEAL_DARK"),
+            radius=0,
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(64),
+            padding=[0, dp(4), 0, dp(4)],
+        )
+        items = [
+            ("H", "Home"),
+            ("F", "Forums"),
+            ("R", "Resources"),
+            ("E", "Echo"),
+            ("P", "Profile"),
+        ]
+        for icon, label in items:
+            is_active = label == "Forums"
+            col_box = BoxLayout(orientation="vertical", spacing=0)
+            icon_lbl = Label(
+                text=icon,
+                font_size=dp(22),
+                color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+            )
+            text_lbl = Label(
+                text=label,
+                font_size=dp(9),
+                bold=is_active,
+                color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+            )
+            col_box.add_widget(icon_lbl)
+            col_box.add_widget(text_lbl)
+            nav.add_widget(col_box)
+        return nav
+
+
 # ── App Entry ─────────────────────────────────────────────────────────────────
 class PeopleFirstApp(App):
     def build(self):
         self.title = "PeopleFirst – Forums"
         sm = ScreenManager(transition=SlideTransition())
-        sm.add_widget(ForumScreen(name="forum",test_server=True))
+        sm.add_widget(ForumScreen(name="forum"))
+        sm.add_widget(ThreadScreen(name="thread"))
         return sm
 
 
