@@ -50,7 +50,7 @@ def recommend(query):
     hits = semantic_search(query_encoding, website_embeddings, 2)
     sources = [websites[hits[0][index]['corpus_id']] for index in range(0,5)]
     return sources
-    return websites[hits[0][0:5]['corpus_id']]
+
 
 def main():
     """

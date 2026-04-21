@@ -17,72 +17,37 @@ from src.PeopleFirst.database.db import Database
 from kivy.network.urlrequest import UrlRequest
 from src.PeopleFirst.server import run
 import json
-import time
 
 
-# ── Brand Colors ─────────────────────────────────────────────────────────────
-BG_DARK        = (0.07, 0.09, 0.11, 1)      # near-black background
-CARD_BG        = (0.10, 0.15, 0.18, 1)      # dark card surface
-TEAL_DARK      = (0.05, 0.27, 0.27, 1)      # header / accent fill
-TEAL_MID       = (0.07, 0.38, 0.38, 1)      # button hover / tag bg
-TEAL_ACCENT    = (0.20, 0.70, 0.65, 1)      # bright accent / highlights
-LIME_ACCENT    = (0.72, 0.93, 0.30, 1)      # lime accent (from brand)
-TEXT_PRIMARY   = (0.93, 0.93, 0.90, 1)      # off-white primary text
-TEXT_SECONDARY = (0.55, 0.68, 0.68, 1)      # muted teal-grey
-TEXT_MUTED     = (0.38, 0.48, 0.48, 1)      # very muted
-DIVIDER        = (0.13, 0.20, 0.22, 1)      # subtle divider
+def get_color(color):
+    # ── Brand Colors ─────────────────────────────────────────────────────────────
 
-# ── Window Setup ─────────────────────────────────────────────────────────────
-Window.size = (390, 844)         
-Window.clearcolor = BG_DARK
-
-# ── Sample Data ──────────────────────────────────────────────────────────────
-# FORUM_TOPICS = [
-#     {
-#         "icon": "💬",
-#         "title": "Anxiety & Stress Management",
-#         "desc": "Tips and support for managing academic anxiety and daily stress.",
-#         "posts": 143,
-#         "last_active": "11h ago",
-#         "tag": "Popular",
-#     },
-#     {
-#         "icon": "🫂",
-#         "title": "Depression Support",
-#         "desc": "A safe space to share your experiences and find understanding.",
-#         "posts": 140,
-#         "last_active": "2h ago",
-#         "tag": "Active",
-#     },
-#     {
-#         "icon": "📚",
-#         "title": "Academic Pressure & Burnout",
-#         "desc": "Dealing with grades, deadlines, and the pressure to succeed.",
-#         "posts": 56,
-#         "last_active": "4h ago",
-#         "tag": None,
-#     },
-#     {
-#         "icon": "🧘",
-#         "title": "Mindfulness & Self-Care",
-#         "desc": "Meditation, routines, and practices that help you recharge.",
-#         "posts": 53,
-#         "last_active": "2h ago",
-#         "tag": None,
-#     },
-# ]
-
-
-# ── Helpers ──────────────────────────────────────────────────────────────────
-
-def rgba(color):
-    """Convert 0-1 tuple to 0-255 tuple for kivy Color instruction."""
-    return color
+    match color:
+        case "BG_DARK":
+            return (0.07, 0.09, 0.11, 1)      # near-black background
+        case "CARD_BG":
+            return (0.10, 0.15, 0.18, 1)      # dark card surface
+        case "TEAL_DARK":
+            return (0.05, 0.27, 0.27, 1)      # header / accent fill
+        case "TEAL_MID":
+            return (0.07, 0.38, 0.38, 1)      # button hover / tag bg
+        case "TEAL_ACCENT":
+            return (0.20, 0.70, 0.65, 1)      # bright accent / highlights
+        case "LIME_ACCENT":
+            return (0.72, 0.93, 0.30, 1)      # lime accent (from brand)
+        case "TEXT_PRIMARY":
+            return (0.93, 0.93, 0.90, 1)      # off-white primary text
+        case "TEXT_SECONDARY":
+            return (0.55, 0.68, 0.68, 1)      # muted teal-grey
+        case "TEXT_MUTED":
+            return (0.38, 0.48, 0.48, 1)      # very muted
+        case "DIVIDER":
+            return (0.13, 0.20, 0.22, 1)      # subtle divider
 
 
 class RoundedBox(Widget):
     """Invisible widget used purely to draw a rounded rect background."""
-    def __init__(self, bg_color=CARD_BG, radius=14, **kwargs):
+    def __init__(self, bg_color=get_color("CARD_BG"), radius=14, **kwargs):
         super().__init__(**kwargs)
         self.bg_color = bg_color
         self.radius = radius
@@ -99,7 +64,7 @@ class RoundedBox(Widget):
 
 class CardLayout(BoxLayout):
     """BoxLayout with a rounded-rect card background."""
-    def __init__(self, bg_color=CARD_BG, radius=14, **kwargs):
+    def __init__(self, bg_color=get_color("CARD_BG"), radius=14, **kwargs):
         super().__init__(**kwargs)
         self.bg_color = bg_color
         self.radius = radius
@@ -116,7 +81,7 @@ class CardLayout(BoxLayout):
 
 class ClickableCard(ButtonBehavior, BoxLayout):
     """A card that is fully clickable with press highlight — no overlay needed."""
-    def __init__(self, bg_color=CARD_BG, radius=14, **kwargs):
+    def __init__(self, bg_color=get_color("CARD_BG"), radius=14, **kwargs):
         super().__init__(**kwargs)
         self.bg_color = bg_color
         self._bg_normal = bg_color
@@ -139,7 +104,7 @@ class ClickableCard(ButtonBehavior, BoxLayout):
         self._color_inst.rgba = self._bg_normal
 
 
-def make_label(text, font_size=14, color=TEXT_PRIMARY, bold=False,
+def make_label(text, font_size=14, color=get_color("TEXT_PRIMARY"), bold=False,
                halign="left", valign="middle", size_hint_y=None, height=None):
     lbl = Label(
         text=text,
@@ -162,17 +127,25 @@ def make_label(text, font_size=14, color=TEXT_PRIMARY, bold=False,
 # ── Forum Screen ─────────────────────────────────────────────────────────────
 
 class ForumScreen(Screen):
-    def __init__(self, test_server=False, **kwargs,):
+    def __init__(self, ip="http://localhost:5000/api/forums/", **kwargs,):
         super().__init__(**kwargs)
         self._search_text = ""
         self.FORUM_TOPICS = []
-        self.TUNNEL_IP = "https://preeducationally-isoperimetrical-sylas.ngrok-free.dev/api/forums/"
-        if test_server:
-            run()
-            self.TUNNEL_IP = "http://localhost:5000/api/forums/"
-        self.API_BASE_URL = self.TUNNEL_IP.rsplit('/api/forums/', 1)[0]
+        self.IP = ip
+        self.API_BASE_URL = self.IP.rsplit('/api/forums/', 1)[0]
         self.reply_grid = None
+        with self.canvas.before:
+            # ── Window Setup ─────────────────────────────────────────────────────────────
+            Window.size = (390, 844)         
+            Color(*get_color("BG_DARK"))
+            self._rect = RoundedRectangle(pos=self.pos, size=self.size,
+                                          radius=[dp(14)])
+        self.bind(pos=self.update_background, size=self.update_background)
         self._build_ui()
+
+    def update_background(self, *_):
+        self._rect.pos = self.pos
+        self._rect.size = self.size
 
     # ── Build ──────────────────────────────────────────────────────────────
     def _build_ui(self):
@@ -181,7 +154,7 @@ class ForumScreen(Screen):
         # ── Status bar spacer
         spacer = Widget(size_hint_y=None, height=dp(44))
         with spacer.canvas:
-            Color(*TEAL_DARK)
+            Color(*get_color("TEAL_DARK"))
             spacer._rect = Rectangle(pos=spacer.pos, size=spacer.size)
         spacer.bind(pos=lambda i, v: setattr(spacer._rect, 'pos', v),
                     size=lambda i, v: setattr(spacer._rect, 'size', v))
@@ -199,7 +172,7 @@ class ForumScreen(Screen):
             padding=[dp(12), dp(4), dp(12), dp(4)],
         )
         create_btn = ClickableCard(
-            bg_color=TEAL_MID,
+            bg_color=get_color("TEAL_MID"),
             radius=12,
             orientation="horizontal",
             padding=[dp(14), 0, dp(14), 0],
@@ -215,14 +188,14 @@ class ForumScreen(Screen):
             text="Don't see your topic? Create your own!",
             font_size=dp(13),
             bold=True,
-            color=LIME_ACCENT,
+            color=get_color("LIME_ACCENT"),
             halign="left",
             valign="middle",
         ))
         create_btn.add_widget(Label(
             text="›",
             font_size=dp(20),
-            color=LIME_ACCENT,
+            color=get_color("LIME_ACCENT"),
             size_hint=(None, 1),
             width=dp(20),
         ))
@@ -237,7 +210,7 @@ class ForumScreen(Screen):
         )
         section_wrap.add_widget(
             make_label("Discussion Topics", font_size=12,
-                       color=TEXT_SECONDARY, bold=True)
+                       color=get_color("TEXT_SECONDARY"), bold=True)
         )
         root.add_widget(section_wrap)
 
@@ -274,7 +247,7 @@ class ForumScreen(Screen):
         footer_lbl = Label(
             text="[i]Welcome to the PeopleFirst Forum! This is a safe, supportive space for students to share, connect, and find comfort in knowing they're not alone. Whether you're going through a tough time or just looking for advice, we're here for you. Please keep in mind that all discussions are moderated to ensure a respectful environment — offensive language, hate speech, and harassment are not tolerated. Be kind, as everyone here is going through something, and remember that your identity remains anonymous at all times. If you are experiencing a crisis, please contact your campus counseling center or call 988 (Suicide & Crisis Lifeline).[/i]",
             font_size=dp(9),
-            color=TEXT_MUTED,
+            color=get_color("TEXT_MUTED"),
             halign="center",
             valign="top",
             markup=True,
@@ -291,7 +264,7 @@ class ForumScreen(Screen):
     # ── Header ────────────────────────────────────────────────────────────
     def _build_header(self):
         header = CardLayout(
-            bg_color=TEAL_DARK,
+            bg_color=get_color("TEAL_DARK"),
             radius=0,
             orientation="horizontal",
             size_hint_y=None,
@@ -303,7 +276,7 @@ class ForumScreen(Screen):
         back_btn = Button(
             text="←",
             font_size=dp(22),
-            color=TEXT_PRIMARY,
+            color=get_color("TEXT_PRIMARY"),
             background_color=(0, 0, 0, 0),
             size_hint=(None, 1),
             width=dp(36),
@@ -311,7 +284,7 @@ class ForumScreen(Screen):
         back_btn.bind(on_release=lambda *_: None)
 
         title = make_label("Forums", font_size=18, bold=True,
-                           color=TEXT_PRIMARY, halign="center")
+                           color=get_color("TEXT_PRIMARY"), halign="center")
 
         header.add_widget(back_btn)
         header.add_widget(title)
@@ -338,10 +311,10 @@ class ForumScreen(Screen):
         )
         self.search_input = TextInput(
             hint_text="Search discussions…",
-            hint_text_color=TEXT_MUTED,
-            foreground_color=TEXT_PRIMARY,
+            hint_text_color=get_color("TEXT_MUTED"),
+            foreground_color=get_color("TEXT_PRIMARY"),
             background_color=(0, 0, 0, 0),
-            cursor_color=TEAL_ACCENT,
+            cursor_color=get_color("TEAL_ACCENT"),
             font_size=dp(14),
             multiline=False,
             padding=[0, dp(10)],
@@ -355,7 +328,7 @@ class ForumScreen(Screen):
     # ── Topic Card ────────────────────────────────────────────────────────
     def _build_topic_card(self, topic):
         card = ClickableCard(
-            bg_color=CARD_BG,
+            bg_color=get_color("CARD_BG"),
             radius=14,
             orientation="horizontal",
             size_hint_y=None,
@@ -368,7 +341,7 @@ class ForumScreen(Screen):
         # Icon bubble
         if topic.get("icon"):
             icon_box = CardLayout(
-                bg_color=TEAL_DARK,
+                bg_color=get_color("TEAL_DARK"),
                 radius=10,
                 size_hint=(None, None),
                 size=(dp(44), dp(44)),
@@ -389,7 +362,7 @@ class ForumScreen(Screen):
             text=topic["title"],
             font_size=dp(14),
             bold=True,
-            color=TEXT_PRIMARY,
+            color=get_color("TEXT_PRIMARY"),
             halign="left",
             valign="middle",
             text_size=(None, None),
@@ -399,7 +372,7 @@ class ForumScreen(Screen):
 
         if topic.get("tag"):
             tag = CardLayout(
-                bg_color=TEAL_MID,
+                bg_color=get_color("TEAL_MID"),
                 radius=8,
                 size_hint=(None, None),
                 size=(dp(60), dp(18)),
@@ -408,7 +381,7 @@ class ForumScreen(Screen):
                 text=topic["tag"],
                 font_size=dp(9),
                 bold=True,
-                color=LIME_ACCENT,
+                color=get_color("LIME_ACCENT"),
             )
             tag.add_widget(tag_lbl)
             title_row.add_widget(tag)
@@ -417,7 +390,7 @@ class ForumScreen(Screen):
         desc_lbl = Label(
             text=topic["description"],
             font_size=dp(11),
-            color=TEXT_SECONDARY,
+            color=get_color("TEXT_SECONDARY"),
             halign="left",
             valign="top",
             text_size=(None, None),
@@ -436,7 +409,7 @@ class ForumScreen(Screen):
         posts_lbl = Label(
             text=f"💬 {topic['posts']} posts",
             font_size=dp(10),
-            color=TEXT_MUTED,
+            color=get_color("TEXT_MUTED"),
             halign="left",
             valign="middle",
         )
@@ -445,7 +418,7 @@ class ForumScreen(Screen):
         active_lbl = Label(
             text=f"🕐 {topic['last_active']}",
             font_size=dp(10),
-            color=TEXT_MUTED,
+            color=get_color("TEXT_MUTED"),
             halign="right",
             valign="middle",
         )
@@ -461,7 +434,7 @@ class ForumScreen(Screen):
         chevron = Label(
             text="›",
             font_size=dp(24),
-            color=TEAL_ACCENT,
+            color=get_color("TEAL_ACCENT"),
             size_hint=(None, 1),
             width=dp(20),
         )
@@ -503,7 +476,7 @@ class ForumScreen(Screen):
             make_label(
                 "Loading replies...",
                 font_size=11,
-                color=TEXT_MUTED,
+                color=get_color("TEXT_MUTED"),
                 size_hint_y=None,
                 height=28,
             )
@@ -521,13 +494,13 @@ class ForumScreen(Screen):
         self._populate_topics(filtered)
 
     def get_request(self):
-        request = UrlRequest(self.TUNNEL_IP, on_success=self.on_success)
+        request = UrlRequest(self.IP, on_success=self.on_success)
         return request
 
     def post_request(self,args):
         params = json.dumps(args)
         request = UrlRequest(
-            self.TUNNEL_IP, 
+            self.IP, 
             req_body=params,
             req_headers={'Content-Type': 'application/json'}, 
             on_success=self.on_success
@@ -537,7 +510,7 @@ class ForumScreen(Screen):
     def patch_request(self,args):
         params = json.dumps(args)
         request = UrlRequest(
-            self.TUNNEL_IP, 
+            self.IP, 
             req_body=params,
             req_headers={'Content-Type': 'application/json'}, 
             on_success=self.on_success,
@@ -586,15 +559,15 @@ class ForumScreen(Screen):
 
         content.add_widget(make_label("Create New Discussion",
                                       font_size=16, bold=True,
-                                      color=TEXT_PRIMARY,
+                                      color=get_color("TEXT_PRIMARY"),
                                       size_hint_y=None, height=30))
 
         title_input = TextInput(
             hint_text="Topic title…",
-            hint_text_color=TEXT_MUTED,
-            foreground_color=TEXT_PRIMARY,
+            hint_text_color=get_color("TEXT_MUTED"),
+            foreground_color=get_color("TEXT_PRIMARY"),
             background_color=(0.12, 0.18, 0.21, 1),
-            cursor_color=TEAL_ACCENT,
+            cursor_color=get_color("TEAL_ACCENT"),
             font_size=dp(13),
             multiline=False,
             size_hint_y=None,
@@ -603,10 +576,10 @@ class ForumScreen(Screen):
         )
         desc_input = TextInput(
             hint_text="What's on your mind? (anonymous)",
-            hint_text_color=TEXT_MUTED,
-            foreground_color=TEXT_PRIMARY,
+            hint_text_color=get_color("TEXT_MUTED"),
+            foreground_color=get_color("TEXT_PRIMARY"),
             background_color=(0.12, 0.18, 0.21, 1),
-            cursor_color=TEAL_ACCENT,
+            cursor_color=get_color("TEAL_ACCENT"),
             font_size=dp(13),
             size_hint_y=None,
             height=dp(90),
@@ -619,8 +592,8 @@ class ForumScreen(Screen):
         cancel_btn = Button(
             text="Cancel",
             font_size=dp(13),
-            color=TEXT_SECONDARY,
-            background_color=CARD_BG,
+            color=get_color("TEXT_SECONDARY"),
+            background_color=get_color("CARD_BG"),
         )
 
         post_btn = Button(
@@ -628,7 +601,7 @@ class ForumScreen(Screen):
             font_size=dp(13),
             bold=True,
             color=(0.05, 0.09, 0.09, 1),
-            background_color=TEAL_ACCENT,
+            background_color=get_color("TEAL_ACCENT"),
         )
 
         btn_row.add_widget(cancel_btn)
@@ -643,7 +616,7 @@ class ForumScreen(Screen):
             content=content,
             size_hint=(0.88, None),
             height=dp(300),
-            background_color=TEAL_DARK,
+            background_color=get_color("TEAL_DARK"),
             separator_height=0,
         )
         cancel_btn.bind(on_release=popup.dismiss)
@@ -674,17 +647,17 @@ class ForumScreen(Screen):
     def _open_topic(self, topic):
         content = BoxLayout(orientation="vertical", padding=dp(16), spacing=dp(12))
         content.add_widget(make_label(topic["title"], font_size=15, bold=True,
-                                      color=TEXT_PRIMARY, size_hint_y=None, height=30))
+                                      color=get_color("TEXT_PRIMARY"), size_hint_y=None, height=30))
         content.add_widget(make_label(topic["description"], font_size=12,
-                                      color=TEXT_SECONDARY, size_hint_y=None, height=40))
+                                      color=get_color("TEXT_SECONDARY"), size_hint_y=None, height=40))
         content.add_widget(make_label(f"💬 {topic['posts']} posts  •  🕐 {topic['last_active']}",
-                                      font_size=11, color=TEXT_MUTED,
+                                      font_size=11, color=get_color("TEXT_MUTED"),
                                       size_hint_y=None, height=24))
         close_btn = Button(
             text="Close",
             font_size=dp(13),
             color=(0.05, 0.09, 0.09, 1),
-            background_color=TEAL_ACCENT,
+            background_color=get_color("TEAL_ACCENT"),
             size_hint_y=None,
             height=dp(40),
         )
@@ -694,7 +667,7 @@ class ForumScreen(Screen):
             content=content,
             size_hint=(0.88, None),
             height=dp(220),
-            background_color=TEAL_DARK,
+            background_color=get_color("TEAL_DARK"),
             separator_height=0,
         )
         close_btn.bind(on_release=popup.dismiss)
@@ -719,7 +692,7 @@ class ForumScreen(Screen):
     # ── Bottom Nav ────────────────────────────────────────────────────────
     def _build_nav(self):
         nav = CardLayout(
-            bg_color=TEAL_DARK,
+            bg_color=get_color("TEAL_DARK"),
             radius=0,
             orientation="horizontal",
             size_hint_y=None,
@@ -730,28 +703,47 @@ class ForumScreen(Screen):
             ("H", "Home"),
             ("F", "Forums"),
             ("R", "Resources"),
+            ("E", "Echo"),
             ("P", "Profile"),
         ]
         for icon, label in items:
             is_active = label == "Forums"
             col_box = BoxLayout(orientation="vertical", spacing=0)
-            icon_lbl = Label(
-                text=icon,
-                font_size=dp(22),
-                color=TEAL_ACCENT if is_active else TEXT_MUTED,
-            )
-            text_lbl = Label(
-                text=label,
-                font_size=dp(9),
-                bold=is_active,
-                color=TEAL_ACCENT if is_active else TEXT_MUTED,
-            )
+            if label == "Resources" or label == "Echo":
+                
+                icon_lbl = Button(
+                    text=f"[size=22]{icon}[/size]\n[size=9]{label}",
+                    markup=True,
+                    halign='center',
+                    color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+                    background_color = get_color("TEAL_DARK") if is_active else get_color("TEXT_MUTED")
+                )
+
+                icon_lbl.bind(on_release= lambda instance: self.transition_screens("Echo"))
+                print(label)
+            else:
+                icon_lbl = Label(
+                    text=icon,
+                    font_size=dp(22),
+                    color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+                )
+                text_lbl = Label(
+                    text=label,
+                    font_size=dp(9),
+                    bold=is_active,
+                    color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+                )
             col_box.add_widget(icon_lbl)
-            col_box.add_widget(text_lbl)
+            if label != "Resources" and label != "Echo":
+                col_box.add_widget(text_lbl)
             nav.add_widget(col_box)
 
         # Active indicator line
         return nav
+    
+    def transition_screens(self, screen_name):
+        self.manager.transition.direction = 'left'
+        self.manager.current = screen_name
 
 
 # ── App Entry ─────────────────────────────────────────────────────────────────

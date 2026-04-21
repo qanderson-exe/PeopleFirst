@@ -17,20 +17,33 @@ import json
 from kivy.network.urlrequest import UrlRequest
 
 
-LIGHT_BG = (0.95,0.90,0.79,1)
-HEADER_BG        = (0.07, 0.09, 0.11, 1)
-CARD_BG        = (0.10, 0.15, 0.18, 1)      # dark card surface
-TEAL_DARK      = (0.05, 0.27, 0.27, 1)      # header / accent fill
-TEXT_PRIMARY   = (0.93, 0.93, 0.90, 1)      # off-white primary text
-TEXT_SECONDARY = (0.55, 0.68, 0.68, 1)      # muted teal-grey
+def get_color(color):
+    match color:
+        case "LIGHT_BG":
+            return (0.95,0.90,0.79,1)
+        case "HEADER_BG":
+            return (0.07, 0.09, 0.11, 1)
+        case "CARD_BG":
+            return (0.10, 0.15, 0.18, 1)      # dark card surface
+        case "TEAL_DARK":
+            return (0.05, 0.27, 0.27, 1)      # header / accent fill
+        case "TEAL_ACCENT":
+            return (0.20, 0.70, 0.65, 1)      # bright accent / highlights
+        case "TEXT_MUTED":
+            return (0.38, 0.48, 0.48, 1)      # very muted
+        case "TEXT_PRIMARY":
+            return (0.93, 0.93, 0.90, 1)      # off-white primary text
+        case "TEXT_SECONDARY":
+            return (0.55, 0.68, 0.68, 1)      # muted teal-grey
+        case "MESSAGE_COLOR":
+            return (0, 0, 0, 1)
+        case "ECHO_MESSAGE_BG":
+            return (0.79, 0.87, 0.79, 1)
+        case "USER_MESSAGE_BG":
+            return (0.91, 0.85, 0.70, 1)
 
-MESSAGE_COLOR = (0, 0, 0, 1)
-ECHO_MESSAGE_BG = (0.79, 0.87, 0.79, 1)
-USER_MESSAGE_BG = (0.91, 0.85, 0.70, 1)
 
-Window.clearcolor = LIGHT_BG
-
-def make_label(text, font_size=14, color=TEXT_PRIMARY, bold=False,
+def make_label(text, font_size=14, color=get_color("TEXT_PRIMARY"), bold=False,
                halign="left", valign="middle", size_hint_y=None, height=None):
     lbl = Label(
         text=text,
@@ -71,7 +84,7 @@ class Message(Label):
 
 class CardLayout(BoxLayout):
     """BoxLayout with a rounded-rect card background."""
-    def __init__(self, bg_color=CARD_BG, radius=14, **kwargs):
+    def __init__(self, bg_color=get_color("CARD_BG"), radius=14, **kwargs):
         super().__init__(**kwargs)
         self.bg_color = bg_color
         self.radius = radius
@@ -86,17 +99,24 @@ class CardLayout(BoxLayout):
         self._rect.size = self.size
 
 class EchoUI(Screen):
-    def __init__(self, ip='http://localhost:5000/api/echo/', test_server=False, **kwargs):
+    def __init__(self, ip='http://localhost:5000/api/echo/', **kwargs):
         super().__init__(**kwargs)
         self.IP = ip
-        if test_server:
-            run()
+        with self.canvas.before:
+            Color(*get_color("LIGHT_BG"))
+            self._rect = RoundedRectangle(pos=self.pos, size=self.size,
+                                          radius=[dp(14)])
+        self.bind(pos=self.update_background, size=self.update_background)
         self.build_ui()
+
+    def update_background(self, *_):
+        self._rect.pos = self.pos
+        self._rect.size = self.size
 
     def build_ui(self):
         root = BoxLayout(orientation="vertical") 
         # ── Header bar
-        root.add_widget(self._build_header())
+        root.add_widget(self.build_header())
 
         
 
@@ -121,6 +141,7 @@ class EchoUI(Screen):
         input_layout.add_widget(self.message_input)
         input_layout.add_widget(send_button)
         root.add_widget(input_layout)
+        root.add_widget(self.build_nav())
         self.add_widget(root)
 
         # self.messages.add_widget(make_label("Hi user! I'm Echo, your AI chatbot designed to help you navigate the app! What do you need help with?",font_size=16, color=MESSAGE_COLOR)))
@@ -129,9 +150,9 @@ class EchoUI(Screen):
         # self.add_widget(root)
 
     # ── Header ────────────────────────────────────────────────────────────
-    def _build_header(self):
+    def build_header(self):
         header = CardLayout(
-            bg_color=TEAL_DARK,
+            bg_color=get_color("TEAL_DARK"),
             radius=0,
             orientation="horizontal",
             size_hint_y=None,
@@ -141,7 +162,7 @@ class EchoUI(Screen):
         )
 
         title = make_label("Echo - PeopleFirst AI Chatbot", font_size=22, bold=True,
-                           color=TEXT_PRIMARY, halign="center")
+                           color=get_color("TEXT_PRIMARY"), halign="center")
         
         header.add_widget(title)
         return header
@@ -164,6 +185,7 @@ class EchoUI(Screen):
 
     def create_query(self):
         query = {'query': self.message_input.text.strip()}
+        self.message_input.text = ""
         params = json.dumps(query)
         request = UrlRequest(
             self.IP, 
@@ -178,6 +200,62 @@ class EchoUI(Screen):
         for index,recommendation in enumerate(result['query']):
             message += f'#{index+1}: {recommendation}\n'
         self.messages.add_widget(Message(message, sender='Echo'))
+
+    # ── Bottom Nav ────────────────────────────────────────────────────────
+    def build_nav(self):
+        nav = CardLayout(
+            bg_color=get_color("TEAL_DARK"),
+            radius=0,
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(64),
+            padding=[0, dp(4), 0, dp(4)],
+        )
+        items = [
+            ("H", "Home"),
+            ("F", "Forums"),
+            ("R", "Resources"),
+            ("E", "Echo"),
+            ("P", "Profile"),
+        ]
+        for icon, label in items:
+            is_active = label == "Echo"
+            col_box = BoxLayout(orientation="vertical", spacing=0)
+            if label == "Resources" or label == "Forums":
+                
+                icon_lbl = Button(
+                    text=f"[size=22]{icon}[/size]\n[size=9]{label}",
+                    markup=True,
+                    halign='center',
+                    color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+                    background_color = get_color("TEAL_DARK") if is_active else get_color("TEXT_MUTED")
+                )
+
+                icon_lbl.bind(on_release= lambda instance: self.transition_screens("Forum"))
+                print(label)
+            else:
+                icon_lbl = Label(
+                    text=icon,
+                    font_size=dp(22),
+                    color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+                )
+                text_lbl = Label(
+                    text=label,
+                    font_size=dp(9),
+                    bold=is_active,
+                    color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+                )
+            col_box.add_widget(icon_lbl)
+            if label != "Resources" and label != "Forums":
+                col_box.add_widget(text_lbl)
+            nav.add_widget(col_box)
+
+        # Active indicator line
+        return nav
+    
+    def transition_screens(self, screen_name):
+        self.manager.transition.direction = 'right'
+        self.manager.current = screen_name
     
 
 class PeopleFirstApp(App):
