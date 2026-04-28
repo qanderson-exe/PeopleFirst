@@ -2,7 +2,7 @@ from flask import Flask
 from flask_restful import Api, Resource, fields, marshal_with, reqparse
 from src.PeopleFirst.database.db import Database
 from threading import Thread
-from src.PeopleFirst.recommender import recommend   # Currently commented out until we're ready to implement Echo
+from src.PeopleFirst.chatbot.recommender import recommend
 
 
 app = Flask(__name__)
@@ -25,9 +25,9 @@ replies_fields = {
 }
 
 resource_fields = {
-    'id': fields.Integer,
-    'link': fields.String,
-    'webpage_title': fields.String
+    'id': fields.String(attribute='_id'),
+    'title': fields.String,
+    'link': fields.String
 }
 
 echo_fields = {
@@ -41,10 +41,6 @@ forums_args.add_argument('description', type=str, required=True, help='Descripti
 forums_args.add_argument('posts', type=int, required=True, help='Posts cannot be blank')
 forums_args.add_argument('last_active', type=str, required=True, help='Last active cannot be blank')
 forums_args.add_argument('tag', type=str, required=True, help='Tag cannot be blank')
-
-post_args = reqparse.RequestParser()
-post_args.add_argument('content', type=str, required=True, help='Content cannot be blank')
-post_args.add_argument('author', type=str, required=True, help='Author cannot be blank')
 
 reply_args = reqparse.RequestParser()
 reply_args.add_argument('description', type=str, required=True, help='Description cannot be blank')
@@ -78,29 +74,16 @@ class ForumsAPI(Resource):
         return result, 201
 
     
-class PostAPI(Resource):
-    def get(self):
-        posts = db.posts_collection.find({})
-        return str(list(posts))
-
-    def post(self):
-        args = post_args.parse_args()
-        forum_id = args['forum_id']
-        content = args['content']
-        author = args['author']
-        result = db.create_post(forum_id,content,author)
-        return result, 201
-    
 class ResourcesAPI(Resource):
     @marshal_with(resource_fields)
     def get(self):
         resources = db.get_resources()
         return resources
     
-    @marshal_with(resource_fields)
-    def get(self,id):
-        resource = db.get_resource(id)
-        return resource
+    # @marshal_with(resource_fields)
+    # def get(self,id):
+    #     resource = db.get_resource(id)
+    #     return resource
 
     @marshal_with(resource_fields)
     def post(self):
@@ -158,7 +141,6 @@ def run():
         pass
 
 api.add_resource(ForumsAPI,'/api/forums/')
-api.add_resource(PostAPI,'/api/posts/')
 api.add_resource(UserAPI,'/api/users/')
 api.add_resource(EchoAPI,'/api/echo/')
 api.add_resource(ReplyAPI,'/api/replies/<string:forum_id>/') # needs forum_id to know which forum the reply is for

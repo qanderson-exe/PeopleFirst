@@ -174,7 +174,7 @@ class ResourcesScreen(Screen):
     def _build_resource_card(self, resource):
         """
         Card layout for a resource.
-        API fields used: webpage_title, link
+        API fields used: title, link
         """
         card = ClickableCard(bg_color=get_color("CARD_BG"), radius=14,
                              orientation="horizontal", size_hint_y=None, height=dp(80),
@@ -189,7 +189,7 @@ class ResourcesScreen(Screen):
         # Text column
         text_col = BoxLayout(orientation="vertical", spacing=dp(4))
 
-        title_lbl = Label(text=resource.get("webpage_title", "Untitled Resource"),
+        title_lbl = Label(text=resource.get("title", "Untitled Resource"),
                           font_size=dp(14), bold=True, color=get_color("TEXT_PRIMARY"),
                           halign="left", valign="middle", text_size=(None, None))
         title_lbl.bind(size=lambda i, v: setattr(i, 'text_size', (v[0], None)))
@@ -225,7 +225,7 @@ class ResourcesScreen(Screen):
     def _on_search(self, instance, value):
         query = value.strip().lower()
         filtered = [r for r in self.RESOURCES
-                    if query in r.get("webpage_title", "").lower()
+                    if query in r.get("title", "").lower()
                     or query in r.get("link", "").lower()]
         self._populate_resources(filtered)
 
@@ -244,7 +244,7 @@ class ResourcesScreen(Screen):
                             size_hint_y=None, height=dp(48))
         top_row.add_widget(Label(text="🔗", font_size=dp(28),
                                  size_hint=(None, 1), width=dp(40)))
-        top_row.add_widget(make_label(resource.get("webpage_title", "Resource"),
+        top_row.add_widget(make_label(resource.get("title", "Resource"),
                                       font_size=15, bold=True,
                                       color=get_color("TEXT_PRIMARY")))
         content.add_widget(top_row)
@@ -305,12 +305,44 @@ class ResourcesScreen(Screen):
         for icon, label in [("H","Home"),("F","Forums"),("R","Resources"),("E","Echo"),("P","Profile")]:
             is_active = (label == "Resources")
             col = BoxLayout(orientation="vertical", spacing=0)
-            col.add_widget(Label(text=icon, font_size=dp(22),
-                                 color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED")))
-            col.add_widget(Label(text=label, font_size=dp(9), bold=is_active,
-                                 color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED")))
+            if label == "Forums" or label == "Echo":
+                
+                icon_lbl = Button(
+                    text=f"[size=22]{icon}[/size]\n[size=9]{label}",
+                    markup=True,
+                    halign='center',
+                    color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+                    background_color = get_color("TEAL_DARK") if is_active else get_color("TEXT_MUTED")
+                )
+
+                if label == "Echo":
+                    icon_lbl.bind(on_release= lambda instance: self.transition_screens("Echo"))
+                else:
+                    icon_lbl.bind(on_release= lambda instance: self.transition_screens("Forum"))
+            else:
+                icon_lbl = Label(
+                    text=icon,
+                    font_size=dp(22),
+                    color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+                )
+                text_lbl = Label(
+                    text=label,
+                    font_size=dp(9),
+                    bold=is_active,
+                    color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+                )
+            col.add_widget(icon_lbl)
+            if label != "Forums" and label != "Echo":
+                col.add_widget(text_lbl)
             nav.add_widget(col)
         return nav
+
+    def transition_screens(self, screen_name):
+        if screen_name == "Echo":
+            self.manager.transition.direction = 'left'
+        else:
+            self.manager.transition.direction = 'right'
+        self.manager.current = screen_name
 
 
 class ResourcesApp(App):

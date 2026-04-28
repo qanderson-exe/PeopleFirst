@@ -12,7 +12,6 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.lang import Builder
 from kivy.uix.anchorlayout import AnchorLayout
-from src.PeopleFirst.server import run
 import json
 from kivy.network.urlrequest import UrlRequest
 
@@ -230,9 +229,11 @@ class EchoUI(Screen):
                     color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
                     background_color = get_color("TEAL_DARK") if is_active else get_color("TEXT_MUTED")
                 )
-
-                icon_lbl.bind(on_release= lambda instance: self.transition_screens("Forum"))
-                print(label)
+                
+                if label == "Forums":
+                    icon_lbl.bind(on_release= lambda instance: self.transition_screens("Forum"))
+                else:
+                    icon_lbl.bind(on_release= lambda instance: self.transition_screens("Resources"))
             else:
                 icon_lbl = Label(
                     text=icon,

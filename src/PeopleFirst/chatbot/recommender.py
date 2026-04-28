@@ -1,6 +1,19 @@
 from sentence_transformers.SentenceTransformer import SentenceTransformer
 from sentence_transformers.util.retrieval import semantic_search
+from kivy.network.urlrequest import UrlRequest
+#from src.PeopleFirst.api.server import run
 import pickle
+import time
+
+
+def get_websites():
+    request = UrlRequest('http://localhost:5000/api/resources/', on_success=on_success)
+    request.wait()
+    return request.result
+
+def on_success(req, result):
+        print("Response received:", result)
+        return result
 
 def initialize_recommender():
     """
@@ -8,14 +21,7 @@ def initialize_recommender():
     """
 
     model = SentenceTransformer('all-MiniLM-L6-v2')
-    websites = [
-    "How to Deal with Stress in College",
-    "Healthy Organic Recipes and Cooking",
-    "Creating healthy habits in college",
-    "Advice for Building Strong Relationships Throughout College",
-    "Surviving and Thriving: 12 Insider Tips for College Success"
-    ]
-
+    websites = [webpage['title'] for webpage in get_websites()]
     website_embeddings = model.encode(websites)
     embeddings_data = {'Websites': websites, 'Embeddings': website_embeddings}
     with open('src/resources/source embeddings.pkl', 'wb') as f:
@@ -67,5 +73,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    #run()
+    time.sleep(5)
+    initialize_recommender()
+    #main()
     

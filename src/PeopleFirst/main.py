@@ -7,7 +7,7 @@ logging.getLogger("pymongo.topology").setLevel(logging.WARNING)
 logging.getLogger("pymongo.connection").setLevel(logging.WARNING)
 
 from src.PeopleFirst.screens.ui import PeopleFirstApp
-from src.PeopleFirst.server import run
+from src.PeopleFirst.api.server import run
 
 
 def main(test_server=True):

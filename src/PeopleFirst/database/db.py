@@ -88,7 +88,7 @@ class Database():
     # Retrieve a resource by its unique id
     def get_resource(self,resource_id):
         id = ObjectId(resource_id)
-        return self.resources_collection.find({"resource_id": id})
+        return self.resources_collection.find({"_id": id})
     
     # Retrieve a list of all resources in the database
     def get_resources(self):

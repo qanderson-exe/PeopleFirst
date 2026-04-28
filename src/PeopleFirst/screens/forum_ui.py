@@ -15,7 +15,6 @@ from kivy.uix.widget import Widget
 from kivy.uix.behaviors import ButtonBehavior
 from src.PeopleFirst.database.db import Database
 from kivy.network.urlrequest import UrlRequest
-from src.PeopleFirst.server import run
 import json
 
 
@@ -648,10 +647,10 @@ class ForumScreen(Screen):
         popup.dismiss()
 
     def _open_topic(self, topic):
-        thread_screen = self.manager.get_screen("thread")
+        thread_screen = self.manager.get_screen("Thread")
         thread_screen.load_topic(topic, self)
         self.manager.transition = SlideTransition(direction="left")
-        self.manager.current = "thread"
+        self.manager.current = "Thread"
 
     def _post_reply_from_reply_btn(self, topic, description):
         topic_id = topic.get("id")
@@ -699,7 +698,10 @@ class ForumScreen(Screen):
                     background_color = get_color("TEAL_DARK") if is_active else get_color("TEXT_MUTED")
                 )
 
-                icon_lbl.bind(on_release= lambda instance: self.transition_screens("Echo"))
+                if label == "Echo":
+                    icon_lbl.bind(on_release= lambda instance: self.transition_screens("Echo"))
+                else:
+                    icon_lbl.bind(on_release= lambda instance: self.transition_screens("Resources"))
                 print(label)
             else:
                 icon_lbl = Label(
@@ -980,7 +982,7 @@ class ThreadScreen(Screen):
 
     def _go_back(self, *_):
         self.manager.transition = SlideTransition(direction="right")
-        self.manager.current = "forum"
+        self.manager.current = "Forum"
 
     def _build_nav(self):
         nav = CardLayout(
@@ -1001,21 +1003,61 @@ class ThreadScreen(Screen):
         for icon, label in items:
             is_active = label == "Forums"
             col_box = BoxLayout(orientation="vertical", spacing=0)
-            icon_lbl = Label(
-                text=icon,
-                font_size=dp(22),
-                color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
-            )
-            text_lbl = Label(
-                text=label,
-                font_size=dp(9),
-                bold=is_active,
-                color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
-            )
+            if label == "Resources" or label == "Echo":
+                
+                icon_lbl = Button(
+                    text=f"[size=22]{icon}[/size]\n[size=9]{label}",
+                    markup=True,
+                    halign='center',
+                    color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+                    background_color = get_color("TEAL_DARK") if is_active else get_color("TEXT_MUTED")
+                )
+
+                if label == "Echo":
+                    icon_lbl.bind(on_release= lambda instance: self.transition_screens("Echo"))
+                else:
+                    icon_lbl.bind(on_release= lambda instance: self.transition_screens("Resources"))
+            else:
+                icon_lbl = Label(
+                    text=icon,
+                    font_size=dp(22),
+                    color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+                )
+                text_lbl = Label(
+                    text=label,
+                    font_size=dp(9),
+                    bold=is_active,
+                    color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+                )
             col_box.add_widget(icon_lbl)
-            col_box.add_widget(text_lbl)
+            if label != "Resources" and label != "Echo":
+                col_box.add_widget(text_lbl)
             nav.add_widget(col_box)
+
+        # Active indicator line
         return nav
+    
+    def transition_screens(self, screen_name):
+        self.manager.transition.direction = 'left'
+        self.manager.current = screen_name
+        # for icon, label in items:
+        #     is_active = label == "Forums"
+        #     col_box = BoxLayout(orientation="vertical", spacing=0)
+        #     icon_lbl = Label(
+        #         text=icon,
+        #         font_size=dp(22),
+        #         color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+        #     )
+        #     text_lbl = Label(
+        #         text=label,
+        #         font_size=dp(9),
+        #         bold=is_active,
+        #         color=get_color("TEAL_ACCENT") if is_active else get_color("TEXT_MUTED"),
+        #     )
+        #     col_box.add_widget(icon_lbl)
+        #     col_box.add_widget(text_lbl)
+        #     nav.add_widget(col_box)
+        # return nav
 
 
 # ── App Entry ─────────────────────────────────────────────────────────────────
@@ -1031,5 +1073,3 @@ class PeopleFirstApp(App):
 
 if __name__ == "__main__":
     PeopleFirstApp().run()
-    #print("here\n",posts[1])
-    #print(imported_topics)
