@@ -224,11 +224,6 @@ class ForumScreen(Screen):
         self.topic_grid.bind(
             minimum_height=self.topic_grid.setter('height')
         )
-
-        # Old implementation
-        # database_posts = self.add_database_posts()
-        # for post in database_posts:
-        #     FORUM_TOPICS.append(post)
         
         db_request = self.get_request()
         db_request.wait()
@@ -455,39 +450,6 @@ class ForumScreen(Screen):
         for topic in topics:
             self.topic_grid.add_widget(self._build_topic_card(topic))
 
-    def get_replies_request(self, topic_id, on_success=None):
-        endpoint = f"{self.API_BASE_URL}/api/replies/{topic_id}/"
-        return UrlRequest(endpoint, on_success=on_success or self.on_success)
-
-    def _on_replies_success(self, req, result):
-        replies = result if isinstance(result, list) else []
-        self._populate_replies(replies)
-
-    def _on_replies_error(self, *_):
-        self._populate_replies([])
-
-    def _fetch_replies_for_topic(self, topic):
-        topic_id = topic.get("id")
-        if not topic_id:
-            self._populate_replies([])
-            return
-
-        self._populate_replies([])
-        self.reply_grid.clear_widgets()
-        self.reply_grid.add_widget(
-            make_label(
-                "Loading replies...",
-                font_size=11,
-                color=get_color("TEXT_MUTED"),
-                size_hint_y=None,
-                height=28,
-            )
-        )
-
-        request = self.get_replies_request(topic_id, on_success=self._on_replies_success)
-        request.on_error = self._on_replies_error
-        request.on_failure = self._on_replies_error
-
     def _on_search(self, instance, value):
         query = value.strip().lower()
         filtered = [t for t in self.FORUM_TOPICS
@@ -520,20 +482,7 @@ class ForumScreen(Screen):
         )
         return request
 
-    def post_reply_request(self, topic_id, args, on_success=None, on_error=None):
-        endpoint = f"{self.API_BASE_URL}/api/replies/{topic_id}/"
-        params = json.dumps(args)
-        request = UrlRequest(
-            endpoint,
-            req_body=params,
-            req_headers={'Content-Type': 'application/json'},
-            on_success=on_success or self.on_success,
-            method='POST'
-        )
-        if on_error:
-            request.on_error = on_error
-            request.on_failure = on_error
-        return request
+    
 
     def on_success(self, req, result):
         print("Response received:", result)
@@ -633,7 +582,7 @@ class ForumScreen(Screen):
             #"icon": "🆕",
             "title": title.strip(),
             "description": desc.strip() or "No description provided.",
-            "posts": 1,
+            "posts": 0,
             "last_active": "just now",
             "tag": "New"
         }
@@ -648,25 +597,9 @@ class ForumScreen(Screen):
 
     def _open_topic(self, topic):
         thread_screen = self.manager.get_screen("Thread")
-        thread_screen.load_topic(topic, self)
+        thread_screen.load_topic(topic)
         self.manager.transition = SlideTransition(direction="left")
         self.manager.current = "Thread"
-
-    def _post_reply_from_reply_btn(self, topic, description):
-        topic_id = topic.get("id")
-        if not topic_id:
-            return
-
-        payload = {
-            "description": (description or "Test reply from Cancel button.").strip() or "Test reply from Cancel button.",
-        }
-
-        request = self.post_reply_request(topic_id, payload)
-        request.wait()
-        if request.resp_status == 201:
-            self._fetch_replies_for_topic(topic)
-        else:
-            print("Reply creation failed")
 
     # ── Bottom Nav ────────────────────────────────────────────────────────
     def _build_nav(self):
@@ -734,11 +667,11 @@ class ThreadScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.topic = None
-        self.forum_screen = None
+        self.IP = "http://localhost:5000/api/replies/"
+        self.API_BASE_URL = self.IP.rsplit('/api/replies/', 1)[0]
 
-    def load_topic(self, topic, forum_screen=None):
+    def load_topic(self, topic):
         self.topic = topic
-        self.forum_screen = forum_screen
         self.clear_widgets()
         self._build_ui()
 
@@ -805,7 +738,11 @@ class ThreadScreen(Screen):
         root.add_widget(desc_wrap)
 
         # ── Replies label
-        replies = self.topic.get("replies", [])
+
+        
+        reply_request = self._fetch_replies_for_topic(self.topic)
+        reply_request.wait()
+        replies = reply_request.result
         replies_hdr = BoxLayout(
             size_hint_y=None, height=dp(30),
             padding=[dp(16), 0, dp(16), 0],
@@ -825,6 +762,7 @@ class ThreadScreen(Screen):
             size_hint_y=None,
         )
         self.reply_grid.bind(minimum_height=self.reply_grid.setter('height'))
+        
         self._populate_replies(replies)
         scroll.add_widget(self.reply_grid)
 
@@ -939,12 +877,10 @@ class ThreadScreen(Screen):
         topic_id = self.topic.get("id")
         payload = {"description": text}
 
-        if self.forum_screen and topic_id:
-            request = self.forum_screen.post_reply_request(
+        if topic_id:
+            request = self.post_reply_request(
                 topic_id,
                 payload,
-                on_success=self._on_reply_post_success,
-                on_error=self._on_reply_post_error,
             )
         else:
             # Fallback: local-only reply (no server)
@@ -958,24 +894,82 @@ class ThreadScreen(Screen):
             self.topic["last_active"] = "just now"
             self.reply_input.text = ""
             self._populate_replies(self.topic["replies"])
-            if self.forum_screen:
-                self.forum_screen._populate_topics(self.forum_screen.FORUM_TOPICS)
+            #if self.forum_screen:
+                #self.forum_screen._populate_topics(self.forum_screen.FORUM_TOPICS)
+
+    def _fetch_replies_for_topic(self, topic):
+        topic_id = topic.get("id")
+        if not topic_id:
+            self._populate_replies([])
+            return
+
+        request = self.get_replies_request(topic_id, on_success=self._on_replies_success)
+        return request
+        #request.on_error = self._on_replies_error
+        #request.on_failure = self._on_replies_error
+
+    def post_reply_request(self, topic_id, args):
+        endpoint = f"{self.API_BASE_URL}/api/replies/{topic_id}/"
+        params = json.dumps(args)
+        request = UrlRequest(
+            endpoint,
+            req_body=params,
+            req_headers={'Content-Type': 'application/json'},
+            on_success=self._on_reply_post_success,
+            on_error=self._on_replies_error,
+            method='POST'
+        )
+        return request
+
+    def get_replies_request(self, topic_id, on_success=None):
+        endpoint = f"{self.API_BASE_URL}/api/replies/{topic_id}/"
+        return UrlRequest(endpoint, on_success=on_success or self._on_replies_success)
 
     def _on_reply_post_success(self, req, result):
         self.reply_input.text = ""
         self.topic["posts"] = self.topic.get("posts", 0) + 1
         self.topic["last_active"] = "just now"
-        if self.forum_screen:
-            self.forum_screen._fetch_replies_for_topic(self.topic)
-            self.forum_screen._populate_topics(self.forum_screen.FORUM_TOPICS)
+        self.update_forums_replies(req)
+        self._fetch_replies_for_topic(self.topic)
+        #self._populate_topics(self.forum_screen.FORUM_TOPICS)
         # Re-fetch replies from server to show the new one
-        if self.forum_screen:
-            self.forum_screen.get_replies_request(
-                self.topic.get("id"),
-                on_success=lambda req, result: self._populate_replies(
-                    result if isinstance(result, list) else []
-                )
+        self.get_replies_request(
+            self.topic.get("id"),
+            on_success=lambda req, result: self._populate_replies(
+                result if isinstance(result, list) else []
             )
+        )
+
+    def update_forums_replies(self,req):
+        """
+        This is for updating the list of replies under a given Forum. Used for counting the number of posts inside of a topic
+        """
+
+        # print(vars(req))
+        # new_reply_id = req.url.rsplit(self.IP,1)[0].replace('/','')
+        # new_reply_description = req.req_body
+        # forums_api = self.IP.split('replies/',1)[0] + "forums/" + self.topic.get('id')
+        # print(forums_api)
+        # print(vars(req))
+        # args = {'id': new_reply_id
+        #         }
+        # params = json.dumps(args)
+        # request = UrlRequest(
+        #     forums_api, 
+        #     req_body=params,
+        #     req_headers={'Content-Type': 'application/json'}, 
+        #     method='PATCH'
+        # )
+        pass
+
+
+    def _on_replies_success(self, req, result):
+            replies = result if isinstance(result, list) else []
+            return replies
+
+    def _on_replies_error(self, *_):
+        self._populate_replies([])
+
 
     def _on_reply_post_error(self, *_):
         print("Reply post failed")
