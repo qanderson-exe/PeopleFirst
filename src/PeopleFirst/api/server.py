@@ -27,6 +27,7 @@ replies_fields = {
 resource_fields = {
     'id': fields.String(attribute='_id'),
     'title': fields.String,
+    'summary': fields.String,
     'link': fields.String
 }
 
@@ -89,7 +90,7 @@ class ResourcesAPI(Resource):
     def post(self):
         args = resource_args.parse_args()
         link = args['link']
-        webpage_title = args['webpage_title']
+        webpage_title = args['title']
         result = db.create_resource(link,webpage_title)
         return result, 201
     

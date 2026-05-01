@@ -199,6 +199,8 @@ class ResourcesScreen(Screen):
                          halign="left", valign="middle", text_size=(None, None))
         link_lbl.bind(size=lambda i, v: setattr(i, 'text_size', (v[0], None)))
 
+
+
         text_col.add_widget(title_lbl)
         text_col.add_widget(link_lbl)
 
@@ -226,7 +228,8 @@ class ResourcesScreen(Screen):
         query = value.strip().lower()
         filtered = [r for r in self.RESOURCES
                     if query in r.get("title", "").lower()
-                    or query in r.get("link", "").lower()]
+                    or query in r.get("link", "").lower()
+                    or query in r.get("summary", "").lower()]
         self._populate_resources(filtered)
 
     def _show_loading(self):
@@ -237,8 +240,8 @@ class ResourcesScreen(Screen):
                        size_hint_y=None, height=60))
 
     def _open_resource(self, resource):
-        content = BoxLayout(orientation="vertical", spacing=dp(14),
-                            padding=[dp(16), dp(16), dp(16), dp(16)])
+        content = BoxLayout(orientation="vertical", spacing=dp(20),
+                            padding=[dp(12), dp(12), dp(12), dp(12)])
 
         top_row = BoxLayout(orientation="horizontal", spacing=dp(10),
                             size_hint_y=None, height=dp(48))
@@ -248,6 +251,11 @@ class ResourcesScreen(Screen):
                                       font_size=15, bold=True,
                                       color=get_color("TEXT_PRIMARY")))
         content.add_widget(top_row)
+
+        summary_lbl = make_label(resource.get("summary", ""), font_size=11,
+                              color=get_color("TEXT_SECONDARY"),
+                              size_hint_y=None, height=20)
+        content.add_widget(summary_lbl)
 
         link_lbl = make_label(resource.get("link", ""), font_size=11,
                               color=get_color("TEAL_ACCENT"),
