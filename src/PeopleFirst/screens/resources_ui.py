@@ -14,6 +14,7 @@ from kivy.uix.widget import Widget
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.network.urlrequest import UrlRequest
 import webbrowser
+import json
 
 
 def get_color(color):
@@ -112,6 +113,44 @@ class ResourcesScreen(Screen):
         root.add_widget(self._build_header())
         root.add_widget(self._build_search())
 
+           
+         # ── Create Topic Button
+        btn_wrap = BoxLayout(
+            size_hint_y=None, height=dp(48),
+            padding=[dp(12), dp(4), dp(12), dp(4)],
+        )
+        create_btn = ClickableCard(
+            bg_color=get_color("TEAL_MID"),
+            radius=12,
+            orientation="horizontal",
+            padding=[dp(14), 0, dp(14), 0],
+            spacing=dp(8),
+        )
+        create_btn.add_widget(Label(
+            text="✏️",
+            font_size=dp(16),
+            size_hint=(None, 1),
+            width=dp(24),
+        ))
+        create_btn.add_widget(Label(
+            text="Don't see your resource? Submit your own!",
+            font_size=dp(13),
+            bold=True,
+            color=get_color("LIME_ACCENT"),
+            halign="left",
+            valign="middle",
+        ))
+        create_btn.add_widget(Label(
+            text="›",
+            font_size=dp(20),
+            color=get_color("LIME_ACCENT"),
+            size_hint=(None, 1),
+            width=dp(20),
+        ))
+        create_btn.bind(on_release=self._show_new_resource_popup)
+        btn_wrap.add_widget(create_btn)
+        root.add_widget(btn_wrap)
+
         # Section label
         section_wrap = BoxLayout(size_hint_y=None, height=dp(36),
                                  padding=[dp(16), dp(4), dp(16), 0])
@@ -174,7 +213,7 @@ class ResourcesScreen(Screen):
     def _build_resource_card(self, resource):
         """
         Card layout for a resource.
-        API fields used: title, link
+        API fields used: webpage_title, link
         """
         card = ClickableCard(bg_color=get_color("CARD_BG"), radius=14,
                              orientation="horizontal", size_hint_y=None, height=dp(80),
@@ -189,7 +228,7 @@ class ResourcesScreen(Screen):
         # Text column
         text_col = BoxLayout(orientation="vertical", spacing=dp(4))
 
-        title_lbl = Label(text=resource.get("title", "Untitled Resource"),
+        title_lbl = Label(text=resource.get("webpage_title") or "Untitled Resource",
                           font_size=dp(14), bold=True, color=get_color("TEXT_PRIMARY"),
                           halign="left", valign="middle", text_size=(None, None))
         title_lbl.bind(size=lambda i, v: setattr(i, 'text_size', (v[0], None)))
@@ -227,7 +266,7 @@ class ResourcesScreen(Screen):
     def _on_search(self, instance, value):
         query = value.strip().lower()
         filtered = [r for r in self.RESOURCES
-                    if query in r.get("title", "").lower()
+                    if query in r.get("webpage_title", "").lower()
                     or query in r.get("link", "").lower()
                     or query in r.get("summary", "").lower()]
         self._populate_resources(filtered)
@@ -247,17 +286,17 @@ class ResourcesScreen(Screen):
                             size_hint_y=None, height=dp(48))
         top_row.add_widget(Label(text="🔗", font_size=dp(28),
                                  size_hint=(None, 1), width=dp(40)))
-        top_row.add_widget(make_label(resource.get("title", "Resource"),
+        top_row.add_widget(make_label(resource.get("webpage_title", "Resource"),
                                       font_size=15, bold=True,
                                       color=get_color("TEXT_PRIMARY")))
         content.add_widget(top_row)
 
-        summary_lbl = make_label(resource.get("summary", ""), font_size=11,
+        summary_lbl = make_label(resource.get("summary") or "", font_size=11,
                               color=get_color("TEXT_SECONDARY"),
                               size_hint_y=None, height=20)
         content.add_widget(summary_lbl)
 
-        link_lbl = make_label(resource.get("link", ""), font_size=11,
+        link_lbl = make_label(resource.get("link") or "", font_size=11,
                               color=get_color("TEAL_ACCENT"),
                               size_hint_y=None, height=20)
         content.add_widget(link_lbl)
@@ -272,7 +311,7 @@ class ResourcesScreen(Screen):
                            background_color=(0.12, 0.18, 0.21, 1),
                            size_hint_y=None, height=dp(38))
 
-        popup = Popup(title="", content=content, size_hint=(0.88, None), height=dp(280),
+        popup = Popup(title="", content=content, size_hint=(0.88, None), height=dp(350),
                       background_color=get_color("CARD_BG"), separator_height=0)
         open_btn.bind(on_release=lambda *_: webbrowser.open(resource.get("link", "")))
         close_btn.bind(on_release=popup.dismiss)
@@ -281,10 +320,37 @@ class ResourcesScreen(Screen):
         popup.open()
 
     def _get_request(self):
-        return UrlRequest(self.IP, on_success=self._on_success,
+        return UrlRequest(self.IP, on_success=self._on_get_success,
                           on_error=self._on_error, on_failure=self._on_error)
+        
+    def _post_request(self,args):
+        params = json.dumps(args)
+        request = UrlRequest(
+            self.IP, 
+            req_body=params,
+            req_headers={'Content-Type': 'application/json'}, 
+            on_success=self._on_post_success,
+            on_error=self._on_error,
+            on_failure=self._on_error,
+        )
+        return request
+    
+    def patch_request(self,args):
+        params = json.dumps(args)
+        request = UrlRequest(
+            self.IP, 
+            req_body=params,
+            req_headers={'Content-Type': 'application/json'}, 
+            on_success=self._on_success,
+            method='PATCH'
+        )
+        return request
 
-    def _on_success(self, req, result):
+    def _on_post_success(self, req, result):
+        self._get_request()
+    
+    def _on_get_success(self, req, result):
+        print("GET result:", result)
         self.RESOURCES = [r for r in result if isinstance(r, dict)] if isinstance(result, list) else []
         self._populate_resources(self.RESOURCES)
 
@@ -294,6 +360,94 @@ class ResourcesScreen(Screen):
             make_label("Could not load resources. Please try again later.",
                        font_size=12, color=get_color("TEXT_MUTED"),
                        halign="center", size_hint_y=None, height=60))
+        
+        # ── New Topic Popup ───────────────────────────────────────────────────
+    def _show_new_resource_popup(self, *_):
+        content = BoxLayout(orientation="vertical", spacing=dp(12),
+                            padding=dp(16))
+
+        content.add_widget(make_label("Create New Resource",
+                                      font_size=16, bold=True,
+                                      color=get_color("TEXT_PRIMARY"),
+                                      size_hint_y=None, height=30))
+
+        title_input = TextInput(
+            hint_text="Resource Title",
+            hint_text_color=get_color("TEXT_MUTED"),
+            foreground_color=get_color("TEXT_PRIMARY"),
+            background_color=(0.12, 0.18, 0.21, 1),
+            cursor_color=get_color("TEAL_ACCENT"),
+            font_size=dp(13),
+            multiline=False,
+            size_hint_y=None,
+            height=dp(40),
+            padding=[dp(10), dp(10)],
+        )
+        desc_input = TextInput(
+            hint_text="Resource Link (https://...)",
+            hint_text_color=get_color("TEXT_MUTED"),
+            foreground_color=get_color("TEXT_PRIMARY"),
+            background_color=(0.12, 0.18, 0.21, 1),
+            cursor_color=get_color("TEAL_ACCENT"),
+            font_size=dp(13),
+            size_hint_y=None,
+            height=dp(90),
+            padding=[dp(10), dp(10)],
+        )
+
+        btn_row = BoxLayout(orientation="horizontal", spacing=dp(10),
+                            size_hint_y=None, height=dp(42))
+
+        cancel_btn = Button(
+            text="Cancel",
+            font_size=dp(13),
+            color=get_color("TEXT_SECONDARY"),
+            background_color=get_color("CARD_BG"),
+        )
+
+        post_btn = Button(
+            text="Post",
+            font_size=dp(13),
+            bold=True,
+            color=(0.05, 0.09, 0.09, 1),
+            background_color=get_color("TEAL_ACCENT"),
+        )
+
+        btn_row.add_widget(cancel_btn)
+        btn_row.add_widget(post_btn)
+
+        content.add_widget(title_input)
+        content.add_widget(desc_input)
+        content.add_widget(btn_row)
+
+        popup = Popup(
+            title="",
+            content=content,
+            size_hint=(0.88, None),
+            height=dp(300),
+            background_color=get_color("TEAL_DARK"),
+            separator_height=0,
+        )
+        cancel_btn.bind(on_release=popup.dismiss)
+        post_btn.bind(on_release=lambda *_: self._post_resource(
+            title_input.text, desc_input.text, popup))
+        popup.open()
+        
+    def _post_resource(self, webpage_title, link, popup):
+        if not webpage_title.strip() or not link.strip():
+                return
+        new_resource = {
+            #"icon": "🆕",
+           "webpage_title": webpage_title.strip(),
+           "link": link.strip(),
+        }
+        db_request = self._post_request(new_resource)
+        if db_request.resp_status == 201:
+            self.RESOURCES.insert(0, new_resource)
+            self._populate_resources(self.RESOURCES)
+        else:
+            print("Post creation failed")
+        popup.dismiss()
 
     def _build_footer(self):
         footer_wrap = BoxLayout(size_hint_y=None, height=dp(80),

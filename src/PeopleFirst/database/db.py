@@ -89,7 +89,7 @@ class Database():
     # Create a new resource with a given link and webpage title.
     def create_resource(self,link,webpage_title):
         resource = {
-            "resource_id": len(self.resources_collection),
+            "resource_id": self.resources_collection.count_documents({}),
             "link": link,
             "webpage_title": webpage_title
         }
