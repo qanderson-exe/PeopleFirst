@@ -1,5 +1,5 @@
 # PeopleFirst - Spring 2026
-Smartphone application dedicated to getting college students help
+PeopleFirst is a smartphone application for Android and iOS devices. It is designed to aid college students succeed through peer forums, approved help resources, and our core AI-trained navigational chatbot.
 
 # Members
   - qanderson-exe - Quamez Anderson - qande001@odu.edu
@@ -9,10 +9,11 @@ Smartphone application dedicated to getting college students help
   - tacbodell - Bryson Coons - bcoon003@odu.edu
 
 # Write-ups
-  [Lab 1](Labs/PeopleFirst%20Lab%201%20Outline.docx)
+  [Software Requirements Specification](Write%20Ups/PeopleFirst%20Software%20Requirements%20Specification.docx)
+  [PeopleFirst Demo Presentation](Write%20Ups/PeopleFirst%20Prototype.pptx)
 
-# How to run
- ## Windows User
+# How to run (Windows)
+ ## Packaging Kivy app to Android/iOS compatible app
  1. Install WSL2 with a Linux distribution https://documentation.ubuntu.com/wsl/stable/howto/install-ubuntu-wsl2/
  2. Clone Git Repository to desired workspace
  3. Create and activate a new virtual environment in WSL2 connection
@@ -20,3 +21,8 @@ Smartphone application dedicated to getting college students help
  5. Install Buildozer https://buildozer.readthedocs.io/en/latest/installation/
  6. Build the PeopleFirst Android/iPhone app https://buildozer.readthedocs.io/en/latest/quickstart/
  7. If built successfully, the downloadable app will be located in the bin folder in your workspace directory
+ 
+ ## Running Kivy app from src
+ 1. In CLI, enter the root directory for PeopleFirst smartphone application
+ 2. Use the command `pip install -r requirements.txt` to install dependencies
+ 3. Enter the command `python -m src.PeopleFirst.main` to run the Kivy launcher

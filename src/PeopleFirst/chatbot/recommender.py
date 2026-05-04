@@ -21,7 +21,7 @@ def initialize_recommender():
     """
 
     model = SentenceTransformer('all-MiniLM-L6-v2')
-    websites = [webpage['title'] for webpage in get_websites()]
+    websites = [webpage['webpage_title'] for webpage in get_websites()]
     website_embeddings = model.encode(websites)
     embeddings_data = {'Websites': websites, 'Embeddings': website_embeddings}
     with open('src/resources/source embeddings.pkl', 'wb') as f:

@@ -2,7 +2,8 @@ from flask import Flask
 from flask_restful import Api, Resource, fields, marshal_with, reqparse
 from src.PeopleFirst.database.db import Database
 from threading import Thread
-from src.PeopleFirst.chatbot.recommender import recommend
+from src.PeopleFirst.chatbot.recommender import recommend, initialize_recommender
+from src.PeopleFirst.chatbot.summarizer import summarize_url
 
 
 app = Flask(__name__)
@@ -90,8 +91,13 @@ class ResourcesAPI(Resource):
     def post(self):
         args = resource_args.parse_args()
         link = args['link']
+        try:
+            summary = summarize_url(link)
+        except:
+            summary = "Summary of resource is currently unavailable"
         webpage_title = args['webpage_title']
-        result = db.create_resource(link,webpage_title)
+        result = db.create_resource(link,webpage_title,summary)
+        initialize_recommender()
         return result, 201
     
 class ReplyAPI(Resource):

@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 import os
 from bson.objectid import ObjectId
-from src.PeopleFirst.chatbot.summarizer import summarize_url
+
 
 class Database():
 
@@ -20,17 +20,16 @@ class Database():
         self.users_collection = self.db["users"]
         self.replies_collection = self.db["replies"]
         self.resources_collection = self.db["resources"]
-        self.check_resource_summary()
 
-    def check_resource_summary(self):
-        for resource in self.resources_collection.find({}):
-            if not resource.get('summary'):
-                try:
-                    summary = summarize_url(resource['link'],sentence_count=5)
-                    self.resources_collection.update_one({"_id":resource["_id"]}, {"$set": {"summary":summary}})
-                    print(resource['link'], summary)
-                except:
-                    self.resources_collection.update_one({"_id":resource["_id"]}, {"$set": {"summary":"Summary of resource is currently unavailable"}})
+    # def check_resource_summary(self):
+    #     for resource in self.resources_collection.find({}):
+    #         if not resource.get('summary'):
+    #             try:
+    #                 summary = summarize_url(resource['link'],sentence_count=5)
+    #                 self.resources_collection.update_one({"_id":resource["_id"]}, {"$set": {"summary":summary}})
+    #                 print(resource['link'], summary)
+    #             except:
+    #                 self.resources_collection.update_one({"_id":resource["_id"]}, {"$set": {"summary":"Summary of resource is currently unavailable"}})
     # Create a forum in the "forums" collection with the specified title and description.
     def create_forum(self,title, description):
         forum = {
@@ -87,11 +86,12 @@ class Database():
         return list(self.replies_collection.find({"forum_id": forum_object_id}))
     
     # Create a new resource with a given link and webpage title.
-    def create_resource(self,link,webpage_title):
+    def create_resource(self,link,webpage_title, summary):
         resource = {
             "resource_id": self.resources_collection.count_documents({}),
             "link": link,
-            "webpage_title": webpage_title
+            "webpage_title": webpage_title,
+            "summary": summary
         }
         result = self.resources_collection.insert_one(resource)
         return str(result.inserted_id)
