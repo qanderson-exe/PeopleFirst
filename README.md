@@ -9,8 +9,8 @@ PeopleFirst is a smartphone application for Android and iOS devices. It is desig
   - tacbodell - Bryson Coons - bcoon003@odu.edu
 
 # Write-ups
-  [Software Requirements Specification](Write%20Ups/PeopleFirst%20Software%20Requirements%20Specification.docx)
-  [PeopleFirst Demo Presentation](Write%20Ups/PeopleFirst%20Prototype.pptx)
+  - [Software Requirements Specification](Write%20Ups/PeopleFirst%20Software%20Requirements%20Specification.docx)
+  - [PeopleFirst Demo Presentation](Write%20Ups/PeopleFirst%20Prototype.pptx)
 
 # How to run (Windows)
  ## Packaging Kivy app to Android/iOS compatible app
